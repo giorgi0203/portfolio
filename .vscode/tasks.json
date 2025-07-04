@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "serve-portfolio",
+			"type": "shell",
+			"command": "nx serve portfolio",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"args": []
+		}
+	]
+}

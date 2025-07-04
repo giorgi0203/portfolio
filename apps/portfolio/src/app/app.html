@@ -1,2 +1,159 @@
-<app-nx-welcome></app-nx-welcome>
+<!-- Animated Background -->
+<div class="fixed inset-0 -z-10 bg-gradient-to-br from-primary-500 to-secondary-500 overflow-hidden">
+  <div class="particle w-1 h-1 bg-white/10 rounded-full animate-float" 
+       *ngFor="let particle of particles" 
+       [style.left.%]="particle.x"
+       [style.top.%]="particle.y"
+       [style.width.px]="particle.size"
+       [style.height.px]="particle.size"
+       [style.animation-duration.s]="particle.speed">
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-lg z-50 py-4 shadow-lg" [@fadeInUp]>
+  <div class="max-w-6xl mx-auto px-5 flex justify-between items-center">
+    <div class="text-xl font-bold text-primary-500">{{ aboutMe.name }}</div>
+    <ul class="flex list-none gap-8">
+      <li><a href="#home" (click)="scrollToSection('home')" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Home</a></li>
+      <li><a href="#about" (click)="scrollToSection('about')" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">About</a></li>
+      <li><a href="#skills" (click)="scrollToSection('skills')" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Skills</a></li>
+      <li><a href="#projects" (click)="scrollToSection('projects')" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Projects</a></li>
+      <li><a href="#contact" (click)="scrollToSection('contact')" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section id="home" class="min-h-screen flex items-center justify-center text-center text-white relative">
+  <div class="flex flex-col items-center justify-center space-y-4">
+    <h1 class="text-6xl font-bold mb-4 text-shadow" [@slideInLeft]>{{ aboutMe.name }}</h1>
+    <h2 class="text-3xl font-light mb-8 opacity-90" [@slideInRight]>{{ aboutMe.title }}</h2>
+    <p class="text-xl max-w-2xl mx-auto mb-12 opacity-90 leading-relaxed" [@fadeInUp]>{{ aboutMe.description }}</p>
+    <div class="flex gap-4 justify-center flex-wrap" [@staggerAnimation]>
+      <button class="px-8 py-4 border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-300 text-white bg-gradient-to-r from-primary-500 to-secondary-500 shadow-lg hover:-translate-y-0.5 hover:shadow-xl relative overflow-hidden btn-shine" (click)="scrollToSection('projects')">View My Work</button>
+      <button class="px-8 py-4 border-2 border-white rounded-full text-base font-semibold cursor-pointer transition-all duration-300 bg-transparent text-white hover:bg-white hover:text-primary-500 relative overflow-hidden btn-shine" (click)="downloadResume()">Download Resume</button>
+    </div>
+  </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="py-20 bg-white/95 backdrop-blur-lg">
+  <div class="max-w-6xl mx-auto px-5">
+    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>About Me</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div [@slideInLeft]>
+        <p class="text-xl leading-relaxed mb-8">{{ aboutMe.description }}</p>
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-4 text-lg">
+            <span class="text-2xl">📍</span>
+            <span>{{ aboutMe.location }}</span>
+          </div>
+          <div class="flex items-center gap-4 text-lg">
+            <span class="text-2xl">✉️</span>
+            <span>{{ aboutMe.email }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-center" [@slideInRight]>
+        <div class="w-80 h-80 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl font-semibold shadow-2xl">
+          <span>Your Photo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Skills Section -->
+<section id="skills" class="py-20 bg-white/95 backdrop-blur-lg">
+  <div class="max-w-6xl mx-auto px-5">
+    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Skills & Technologies</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" [@staggerAnimation]>
+      <div class="bg-white p-8 rounded-3xl shadow-xl transition-transform duration-300 hover:-translate-y-2 text-center skill-card-hover" *ngFor="let skill of skills">
+        <div class="text-5xl mb-4">{{ skill.icon }}</div>
+        <h3 class="text-2xl mb-4 text-gray-800">{{ skill.name }}</h3>
+        <div class="bg-gray-200 rounded-lg h-2 mb-4 overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg transition-all duration-1000 ease-out progress-bar" [style.width.%]="skill.level"></div>
+        </div>
+        <span class="font-semibold text-primary-500">{{ skill.level }}%</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Projects Section (Showroom) -->
+<section id="projects" class="py-20 bg-white/98 backdrop-blur-lg">
+  <div class="max-w-6xl mx-auto px-5">
+    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Featured Projects</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" [@staggerAnimation]>
+      <div class="bg-white rounded-3xl overflow-hidden shadow-xl transition-transform duration-300 hover:-translate-y-2 relative project-shine" *ngFor="let project of projects">
+        <div class="relative overflow-hidden">
+          <img [src]="project.image" [alt]="project.title" class="w-full h-64 object-cover transition-transform duration-300">
+          <div class="absolute inset-0 bg-primary-500/90 flex items-center justify-center opacity-0 transition-opacity duration-300 hover:opacity-100">
+            <div class="flex gap-4">
+              <a [href]="project.demoUrl" class="px-4 py-2 text-sm bg-white text-primary-500 rounded-full transition-all duration-300 hover:bg-primary-100" target="_blank">Live Demo</a>
+              <a [href]="project.codeUrl" class="px-4 py-2 text-sm bg-transparent text-white border-2 border-white rounded-full transition-all duration-300 hover:bg-white hover:text-primary-500" target="_blank">View Code</a>
+            </div>
+          </div>
+        </div>
+        <div class="p-8">
+          <h3 class="text-2xl mb-4 text-gray-800">{{ project.title }}</h3>
+          <p class="mb-6 text-gray-600 leading-relaxed">{{ project.description }}</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="bg-gray-100 px-3 py-1 rounded-full text-xs text-primary-500 font-medium" *ngFor="let tech of project.technologies">{{ tech }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="py-20 bg-white/95 backdrop-blur-lg">
+  <div class="max-w-6xl mx-auto px-5">
+    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Get In Touch</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start" [@staggerAnimation]>
+      <div>
+        <h3 class="text-3xl mb-4 text-gray-800">Let's work together!</h3>
+        <p class="text-xl mb-8 text-gray-600">I'm always open to discussing new opportunities and interesting projects.</p>
+        <div class="flex flex-col gap-4">
+          <a [href]="'mailto:' + aboutMe.email" class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500">
+            <span class="text-2xl">✉️</span>
+            <span>{{ aboutMe.email }}</span>
+          </a>
+          <a [href]="aboutMe.github" class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500" target="_blank">
+            <span class="text-2xl">🐙</span>
+            <span>GitHub</span>
+          </a>
+          <a [href]="aboutMe.linkedin" class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500" target="_blank">
+            <span class="text-2xl">💼</span>
+            <span>LinkedIn</span>
+          </a>
+        </div>
+      </div>
+      <div class="bg-white p-8 rounded-3xl shadow-xl">
+        <form>
+          <div class="mb-6">
+            <input type="text" placeholder="Your Name" required class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg">
+          </div>
+          <div class="mb-6">
+            <input type="email" placeholder="Your Email" required class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg">
+          </div>
+          <div class="mb-6">
+            <textarea placeholder="Your Message" rows="5" required class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg resize-none"></textarea>
+          </div>
+          <button type="submit" class="px-8 py-4 border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-300 text-white bg-gradient-to-r from-primary-500 to-secondary-500 shadow-lg hover:-translate-y-0.5 hover:shadow-xl relative overflow-hidden btn-shine w-full">Send Message</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-white/95 backdrop-blur-lg py-8 text-center text-gray-600">
+  <div class="max-w-6xl mx-auto px-5">
+    <p>&copy; 2025 {{ aboutMe.name }}. All rights reserved.</p>
+  </div>
+</footer>
+
 <router-outlet></router-outlet>

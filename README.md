@@ -1,33 +1,105 @@
-# 
+# Portfolio Landing Page
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A modern, animated portfolio website built with Angular and NestJS using Nx monorepo.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+## 🚀 Features
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+- **Animated Background**: Beautiful gradient background with floating particles
+- **Smooth Animations**: Fade-in, slide-in, and stagger animations using Angular Animations
+- **Responsive Design**: Mobile-first approach with Tailwind CSS responsive utilities
+- **Modern UI**: Glassmorphism effects, gradient buttons, and smooth transitions using Tailwind
+- **Interactive Showroom**: Project showcase with hover effects and overlay actions
+- **Skills Section**: Animated progress bars showing skill proficiency
+- **Contact Form**: Ready-to-use contact form with Tailwind styling
+- **Smooth Scrolling**: Navigation with smooth scroll to sections
+- **CI/CD Pipeline**: Automated deployment to DigitalOcean droplet
 
-## Finish your CI setup
+## 🛠️ Tech Stack
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/qv2VI8rNwV)
+- **Frontend**: Angular 20 (Standalone Components)
+- **Backend**: NestJS (ready for future API development)
+- **Styling**: Tailwind CSS v4+ with CSS-first configuration
+- **Build Tool**: Nx 21.2.2 (Monorepo)
+- **Deployment**: DigitalOcean Droplet with Nginx
+- **CI/CD**: GitHub Actions
 
+## 🎨 Design Features
 
-## Run tasks
+- **Color Scheme**: Custom Tailwind color palette (primary/secondary gradients)
+- **Typography**: Inter font family configured in Tailwind
+- **Effects**: Glassmorphism with backdrop-blur utilities, custom shadows
+- **Interactions**: Hover effects with Tailwind utilities and custom animations
 
-To run the dev server for your app, use:
+## 🚦 Getting Started
 
-```sh
+### Prerequisites
+
+- Node.js (v20 or higher)
+- npm
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
 npx nx serve portfolio
 ```
 
+4. Open your browser to `http://localhost:4200`
+
+## 📝 Customization
+
+### Personal Information
+Update the `aboutMe` object in `apps/portfolio/src/app/app.ts`:
+
+```typescript
+aboutMe = {
+  name: 'Your Name',
+  title: 'Your Title',
+  description: 'Your description...',
+  // ... other properties
+};
+```
+
+### Skills
+Modify the `skills` array to reflect your technologies:
+
+```typescript
+skills = [
+  { name: 'Angular', level: 95, icon: '⚡' },
+  // ... add your skills
+];
+```
+
+### Projects
+Update the `projects` array with your portfolio projects:
+
+```typescript
+projects = [
+  {
+    title: 'Project Name',
+    description: 'Project description',
+    // ... project details
+  }
+];
+```
+
+## 🏗️ Build
+
 To create a production bundle:
 
-```sh
+```bash
 npx nx build portfolio
 ```
 
-To see all available targets to run for a project, run:
+To see all available targets:
 
-```sh
+```bash
 npx nx show project portfolio
 ```
 
@@ -65,6 +137,29 @@ You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx 
 Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
 
 [Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+
+## 🚀 Deployment
+
+This project includes automated CI/CD pipeline for deployment to DigitalOcean droplet.
+
+### Quick Deployment Setup
+
+1. **Create DigitalOcean Droplet**: Ubuntu 22.04 with SSH key access
+2. **Run Server Setup**: Execute the setup script on your droplet
+3. **Configure GitHub Secrets**: Add droplet credentials to GitHub repository
+4. **Deploy**: Push to master branch to trigger automatic deployment
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### Manual Deployment
+
+```bash
+# Build the application
+npx nx build portfolio --configuration=production
+
+# Deploy to your server
+scp -r dist/apps/portfolio/* user@your-server:/var/www/portfolio/
+```
 
 ## Useful links
 

@@ -1,1 +1,225 @@
-/* You can add global styles to this file, and also import other style files */
+@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@source "./apps/portfolio/src/**/*.{html,ts}";
+@source "./libs/**/*.{html,ts}";
+
+@theme {
+  /* Colors */
+  --color-primary-50: #f0f4ff;
+  --color-primary-100: #e0e9ff;
+  --color-primary-200: #c7d6fe;
+  --color-primary-300: #a5b8fc;
+  --color-primary-400: #8b95f8;
+  --color-primary-500: #667eea;
+  --color-primary-600: #5a67d8;
+  --color-primary-700: #4c51bf;
+  --color-primary-800: #434190;
+  --color-primary-900: #3c366b;
+
+  --color-secondary-50: #f7f3ff;
+  --color-secondary-100: #ede9fe;
+  --color-secondary-200: #ddd6fe;
+  --color-secondary-300: #c4b5fd;
+  --color-secondary-400: #a78bfa;
+  --color-secondary-500: #764ba2;
+  --color-secondary-600: #7c3aed;
+  --color-secondary-700: #6d28d9;
+  --color-secondary-800: #5b21b6;
+  --color-secondary-900: #4c1d95;
+
+  /* Font families */
+  --font-family-sans: 'Inter', 'system-ui', '-apple-system',
+    'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif';
+
+  /* Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-gradient-shift: gradientShift 3s ease infinite;
+  --animate-pulse-slow: pulse 3s ease-in-out infinite;
+  --animate-bounce-slow: bounce 2s infinite;
+  --animate-typing: typing 3s steps(40, end),
+    blink-caret 0.75s step-end infinite;
+  --animate-shine: shine 2s ease-in-out infinite;
+  --animate-fade-in-up: fadeInUp 0.6s ease-out;
+  --animate-slide-in-left: slideInLeft 0.8s ease-out;
+  --animate-slide-in-right: slideInRight 0.8s ease-out;
+
+  /* Background images */
+  --bg-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-gradient-button: linear-gradient(45deg, #667eea, #764ba2);
+  --bg-gradient-hover: linear-gradient(45deg, #f093fb, #f5576c, #4facfe);
+  --bg-gradient-shine: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+
+  /* Backdrop blur */
+  --backdrop-blur-xs: 2px;
+  --backdrop-blur-sm: 4px;
+  --backdrop-blur-md: 8px;
+  --backdrop-blur-lg: 16px;
+  --backdrop-blur-xl: 24px;
+  --backdrop-blur-2xl: 40px;
+  --backdrop-blur-3xl: 64px;
+
+  /* Box shadows */
+  --shadow-glass: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --shadow-glass-lg: 0 20px 60px rgba(0, 0, 0, 0.1);
+  --shadow-primary: 0 4px 15px rgba(102, 126, 234, 0.4);
+  --shadow-primary-lg: 0 6px 20px rgba(102, 126, 234, 0.6);
+  --shadow-glow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+
+  /* Text shadows */
+  --text-shadow-sm: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  --text-shadow-DEFAULT: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  --text-shadow-lg: 4px 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Keyframes */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: currentColor;
+  }
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Utilities */
+@utility text-shadow-sm {
+  text-shadow: var(--text-shadow-sm);
+}
+
+@utility text-shadow {
+  text-shadow: var(--text-shadow-DEFAULT);
+}
+
+@utility text-shadow-lg {
+  text-shadow: var(--text-shadow-lg);
+}
+
+@utility text-shadow-none {
+  text-shadow: none;
+}
+
+@utility bg-gradient-primary {
+  background-image: var(--bg-gradient-primary);
+}
+
+@utility bg-gradient-button {
+  background-image: var(--bg-gradient-button);
+}
+
+@utility bg-gradient-hover {
+  background-image: var(--bg-gradient-hover);
+}
+
+@utility bg-gradient-shine {
+  background-image: var(--bg-gradient-shine);
+}
+
+@utility backdrop-blur-xs {
+  backdrop-filter: blur(var(--backdrop-blur-xs));
+}
+
+@utility backdrop-blur-3xl {
+  backdrop-filter: blur(var(--backdrop-blur-3xl));
+}
+
+@utility shadow-glass {
+  box-shadow: var(--shadow-glass);
+}
+
+@utility shadow-glass-lg {
+  box-shadow: var(--shadow-glass-lg);
+}
+
+@utility shadow-primary {
+  box-shadow: var(--shadow-primary);
+}
+
+@utility shadow-primary-lg {
+  box-shadow: var(--shadow-primary-lg);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
