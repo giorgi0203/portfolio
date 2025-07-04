@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { trigger, state, style, transition, animate, stagger, query } from '@angular/animations';
+import { trigger, style, transition, animate, stagger, query } from '@angular/animations';
 
 @Component({
   imports: [RouterModule, CommonModule],

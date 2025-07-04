@@ -1,15 +1,14 @@
-import { Directive, ElementRef, OnInit, OnDestroy, Input } from '@angular/core';
+import { Directive, ElementRef, OnInit, OnDestroy, Input, inject } from '@angular/core';
 
 @Directive({
   selector: '[appScrollAnimation]',
   standalone: true
 })
 export class ScrollAnimationDirective implements OnInit, OnDestroy {
-  @Input('appScrollAnimation') animationClass: string = 'fade-in-up';
+  @Input('appScrollAnimation') animationClass = 'fade-in-up';
   
   private observer: IntersectionObserver | null = null;
-
-  constructor(private el: ElementRef) {}
+  private el = inject(ElementRef);
 
   ngOnInit(): void {
     this.observer = new IntersectionObserver(
