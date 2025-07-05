@@ -54,14 +54,6 @@ export class App {
 
   projects = [
     {
-      title: 'E-Commerce Platform',
-      description: 'Full-stack e-commerce solution with Angular, NestJS, and PostgreSQL',
-      image: 'https://via.placeholder.com/400x250/667eea/ffffff?text=E-Commerce+Platform',
-      technologies: ['Angular', 'NestJS', 'PostgreSQL', 'Stripe'],
-      demoUrl: '#',
-      codeUrl: '#'
-    },
-    {
       title: 'Task Management App',
       description: 'Collaborative task management with real-time updates',
       image: 'https://via.placeholder.com/400x250/764ba2/ffffff?text=Task+Management',
