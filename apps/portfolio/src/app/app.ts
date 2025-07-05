@@ -40,7 +40,7 @@ import { trigger, style, transition, animate, stagger, query } from '@angular/an
   ]
 })
 export class App {
-  protected title = 'Portfolio';
+  protected title = 'Giorgi Arabuli';
   
   // Portfolio data
   skills = [
