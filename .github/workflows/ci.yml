@@ -62,6 +62,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           port: ${{ secrets.DROPLET_PORT || 22 }}
           script: |
             # Create web directory if it doesn't exist
@@ -84,6 +85,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           port: ${{ secrets.DROPLET_PORT || 22 }}
           source: "dist/*"
           target: "/var/www/portfolio/current/"
@@ -96,6 +98,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           port: ${{ secrets.DROPLET_PORT || 22 }}
           script: |
             # Set proper permissions
