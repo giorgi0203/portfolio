@@ -161,6 +161,46 @@ npx nx build portfolio --configuration=production
 scp -r dist/apps/portfolio/* user@your-server:/var/www/portfolio/
 ```
 
+## 🧪 Quality Assurance & Testing
+
+This project implements comprehensive quality assurance practices:
+
+### Testing Stack
+- **Unit Testing**: Vitest with Angular Testing Utilities
+- **Memory Stress Testing**: Custom memory leak detection and performance monitoring
+- **Mutation Testing**: Stryker for test quality assessment
+- **Performance Benchmarking**: Automated performance and memory usage analysis
+
+### Available Test Commands
+```bash
+# Standard unit tests
+npm run test
+
+# Memory stress tests with leak detection
+npm run test:memory
+
+# Mutation testing for code quality
+npm run mutation:test
+
+# Full performance benchmarks
+npm run benchmark
+```
+
+### Memory Testing Features
+- **Memory Leak Detection**: Identifies and reports memory leaks
+- **Performance Monitoring**: Tracks memory usage patterns and execution time
+- **DOM Operations Testing**: Stress tests for component creation/destruction
+- **Large Data Processing**: Tests memory efficiency with complex data operations
+- **GC Monitoring**: Tracks garbage collection effectiveness
+
+### Quality Reports
+- Memory test results with detailed metrics
+- Interactive mutation testing reports
+- Performance benchmarks with historical tracking
+- All reports available in `reports/` directory
+
+For detailed testing documentation, see [TESTING.md](./TESTING.md).
+
 ## Useful links
 
 Learn more:
