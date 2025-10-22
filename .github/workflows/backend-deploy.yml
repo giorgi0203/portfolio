@@ -246,7 +246,7 @@ jobs:
             
             # Start PM2 process using absolute path to config
             echo "Starting PM2 process..."
-            pm2 start /var/www/portfolio-api/ecosystem.config.js
+            pm2 start /var/www/portfolio-api/current/ecosystem.config.js
             
             # Save PM2 configuration
             pm2 save
