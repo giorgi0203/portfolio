@@ -224,44 +224,65 @@ jobs:
             sudo chown -R www-data:www-data /var/www/portfolio-api/current
             sudo chmod -R 755 /var/www/portfolio-api/current
             
-            # Install production dependencies
-            echo "Installing production dependencies..."
+            # Install ALL dependencies (not just production)
+            echo "Installing dependencies..."
             cd /var/www/portfolio-api/current
-            sudo -u www-data npm ci --only=production --silent
+            sudo -u www-data npm ci --silent
             
             # Create logs directory for PM2
             echo "Creating logs directory..."
             sudo mkdir -p /var/log/pm2
             sudo chown -R $USER:$USER /var/log/pm2
             
-            # Start PM2 process
+            # Navigate to safe directory for PM2 operations
+            cd /home/$USER
+            
+            # Check if PM2 process exists and stop it
+            if pm2 list | grep -q "portfolio-api"; then
+              echo "Stopping existing PM2 process..."
+              pm2 stop portfolio-api
+              pm2 delete portfolio-api
+            fi
+            
+            # Start PM2 process using absolute path to config
             echo "Starting PM2 process..."
-            cd /var/www/portfolio-api/current
-            pm2 start ecosystem.config.js --env production || pm2 restart portfolio-api
+            pm2 start /var/www/portfolio-api/ecosystem.config.js
             
             # Save PM2 configuration
             pm2 save
             
             # Wait for application to start
             echo "Waiting for application to start..."
-            sleep 10
+            sleep 15
             
-            # Health check
+            # Health check with retries
             echo "Running health check..."
-            if curl -f http://localhost:3000/api/health; then
-              echo "✅ Backend health check passed!"
-            else
-              echo "❌ Backend health check failed!"
-              echo "Rolling back to backup..."
-              if [ -d "/var/www/portfolio-api/backup" ]; then
-                sudo rm -rf /var/www/portfolio-api/current
-                sudo mv /var/www/portfolio-api/backup /var/www/portfolio-api/current
-                pm2 restart portfolio-api
+            for i in {1..5}; do
+              if curl -f http://localhost:3000/api/health; then
+                echo "✅ Backend health check passed!"
+                break
+              else
+                echo "❌ Health check attempt $i failed, retrying in 5 seconds..."
                 sleep 5
-                curl -f http://localhost:3000/api/health && echo "Rollback successful" || echo "Rollback failed"
+                if [ $i -eq 5 ]; then
+                  echo "❌ All health check attempts failed!"
+                  echo "Checking PM2 logs..."
+                  pm2 logs portfolio-api --lines 20
+                  echo "Rolling back to backup..."
+                  if [ -d "/var/www/portfolio-api/backup" ]; then
+                    sudo rm -rf /var/www/portfolio-api/current
+                    sudo mv /var/www/portfolio-api/backup /var/www/portfolio-api/current
+                    cd /var/www/portfolio-api/current
+                    sudo -u www-data npm ci --silent
+                    cd /home/$USER
+                    pm2 restart portfolio-api
+                    sleep 5
+                    curl -f http://localhost:3000/api/health && echo "Rollback successful" || echo "Rollback failed"
+                  fi
+                  exit 1
+                fi
               fi
-              exit 1
-            fi
+            done
             
             # Show PM2 status
             echo "PM2 Status:"
