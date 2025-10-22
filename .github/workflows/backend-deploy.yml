@@ -42,7 +42,7 @@ jobs:
         run: npx nx test ${{ env.SHARED_TYPES_PROJECT }}
 
       - name: Lint backend
-        run: npx nx lint ${{ env.BACKEND_PROJECT }}
+        run: npx nx eslint:lint ${{ env.BACKEND_PROJECT }}
 
       - name: Test backend
         run: npx nx test ${{ env.BACKEND_PROJECT }}
