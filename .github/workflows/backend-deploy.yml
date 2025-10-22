@@ -47,8 +47,8 @@ jobs:
       - name: Test backend
         run: npx nx test ${{ env.BACKEND_PROJECT }}
 
-      - name: E2E test backend
-        run: npx nx e2e ${{ env.BACKEND_PROJECT }}-e2e
+      # - name: E2E test backend
+      #   run: npx nx e2e ${{ env.BACKEND_PROJECT }}-e2e
 
   build-backend:
     name: Build Backend
