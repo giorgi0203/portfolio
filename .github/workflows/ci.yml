@@ -55,6 +55,14 @@ jobs:
           name: portfolio-dist
           path: dist/
 
+      # Test connectivity before deployment
+      - name: Test Droplet Connectivity
+        run: |
+          echo "Testing connectivity to droplet..."
+          ping -c 3 ${{ secrets.DROPLET_HOST }} || echo "Ping failed but continuing..."
+          timeout 10s bash -c "</dev/tcp/${{ secrets.DROPLET_HOST }}/22" && echo "Port 22 is open" || echo "Port 22 connection failed"
+        continue-on-error: true
+
       # Deploy to DigitalOcean Droplet
       - name: Deploy to DigitalOcean
         uses: appleboy/ssh-action@v1.0.0
@@ -63,20 +71,44 @@ jobs:
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          port: ${{ secrets.DROPLET_PORT || 22 }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+          debug: true
           script: |
+            echo "=== Deployment Started ==="
+            echo "Connected to: $(hostname)"
+            echo "User: $(whoami)"
+            echo "Current directory: $(pwd)"
+            
             # Create web directory if it doesn't exist
+            echo "Creating web directory..."
             sudo mkdir -p /var/www/portfolio
             
-            # Stop nginx temporarily
-            sudo systemctl stop nginx
+            # Check nginx status before stopping
+            echo "Checking nginx status..."
+            if sudo systemctl is-active --quiet nginx; then
+              echo "Stopping nginx..."
+              sudo systemctl stop nginx
+            else
+              echo "Nginx is not running"
+            fi
             
             # Backup current deployment
+            echo "Backing up current deployment..."
             sudo rm -rf /var/www/portfolio/backup
-            sudo mv /var/www/portfolio/current /var/www/portfolio/backup || true
+            if [ -d "/var/www/portfolio/current" ]; then
+              sudo mv /var/www/portfolio/current /var/www/portfolio/backup
+              echo "Backup created"
+            else
+              echo "No current deployment to backup"
+            fi
             
             # Create new deployment directory
+            echo "Creating new deployment directory..."
             sudo mkdir -p /var/www/portfolio/current
+            sudo chown -R $USER:www-data /var/www/portfolio/current
+            echo "Deployment directory prepared"
 
       # Copy files to DigitalOcean
       - name: Copy files to server
@@ -86,7 +118,9 @@ jobs:
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          port: ${{ secrets.DROPLET_PORT || 22 }}
+          port: 22
+          timeout: 60s
+          debug: true
           source: "dist/*"
           target: "/var/www/portfolio/current/"
           strip_components: 1
@@ -99,12 +133,37 @@ jobs:
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          port: ${{ secrets.DROPLET_PORT || 22 }}
+          port: 22
+          timeout: 60s
+          command_timeout: 5m
+          debug: true
           script: |
+            echo "=== Finalizing Deployment ==="
+            
+            # Verify files were copied
+            echo "Checking deployed files..."
+            ls -la /var/www/portfolio/current/
+            
             # Set proper permissions
+            echo "Setting file permissions..."
             sudo chown -R www-data:www-data /var/www/portfolio/current
             sudo chmod -R 755 /var/www/portfolio/current
             
+            # Test nginx configuration before starting
+            echo "Testing nginx configuration..."
+            sudo nginx -t
+            
             # Start nginx
+            echo "Starting nginx..."
             sudo systemctl start nginx
             sudo systemctl reload nginx
+            
+            # Verify nginx is running
+            echo "Verifying nginx status..."
+            sudo systemctl status nginx --no-pager
+            
+            # Test local response
+            echo "Testing local response..."
+            curl -I http://localhost || echo "Local test failed"
+            
+            echo "=== Deployment Complete ==="
