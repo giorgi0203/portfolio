@@ -27,10 +27,10 @@ jobs:
           cache: 'npm'
 
       - run: npm ci --legacy-peer-deps
-      - uses: nrwl/nx-set-shas@v4
 
-      # Run linting and testing
-      - run: npx nx affected -t lint test
+      # Run linting and testing (using explicit commands instead of affected)
+      - run: npx nx lint portfolio
+      - run: npx nx test portfolio
 
       # Build the portfolio app for production
       - run: npx nx build portfolio --configuration=production
