@@ -81,7 +81,7 @@ jobs:
         with:
           name: backend-build
           path: |
-            dist/apps/portfolio-api/
+            dist/portfolio-api/
             dist/libs/shared-types/
           retention-days: 1
 
@@ -167,9 +167,9 @@ jobs:
           port: 22
           timeout: 60s
           debug: true
-          source: "dist/apps/portfolio-api/*"
+          source: "dist/portfolio-api/*"
           target: "/var/www/portfolio-api/current/"
-          strip_components: 3
+          strip_components: 2
 
       # Copy shared types to server
       - name: Copy Shared Types to Server
