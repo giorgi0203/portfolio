@@ -1,53 +1,68 @@
 #!/bin/bash
-
-# DigitalOcean Droplet Setup Script for Portfolio Deployment
-# Run this script on your DigitalOcean droplet to set up the server
-
 set -e
 
-echo "🚀 Setting up DigitalOcean droplet for portfolio deployment..."
+echo "🌟 Setting up Portfolio Server on DigitalOcean..."
 
 # Update system
-sudo apt update && sudo apt upgrade -y
+echo "� Updating system packages..."
+apt update && apt upgrade -y
 
-# Install required packages
-sudo apt install -y nginx curl ufw git
+# Install Node.js 20
+echo "📦 Installing Node.js 20..."
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+apt-get install -y nodejs
 
-# Configure firewall
-sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
-sudo ufw --force enable
+# Install nginx
+echo "📦 Installing Nginx..."
+apt install nginx -y
 
-# Create deployment directories
-sudo mkdir -p /var/www/portfolio/current
-sudo mkdir -p /var/www/portfolio/backup
+# Install PM2 for process management
+echo "📦 Installing PM2..."
+npm install -g pm2
 
-# Set up nginx configuration
-sudo tee /etc/nginx/sites-available/portfolio > /dev/null <<EOF
-server {
-    listen 80;
-    server_name your-domain.com www.your-domain.com;
-    root /var/www/portfolio/current;
-    index index.html;
+# Install certbot for SSL
+echo "📦 Installing Certbot for SSL..."
+apt install certbot python3-certbot-nginx -y
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+# Install git
+echo "📦 Installing Git..."
+apt install git -y
 
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private no_last_modified no_etag auth;
-    gzip_types
-        application/atom+xml
-        application/javascript
-        application/json
-        application/rss+xml
-        application/vnd.ms-fontobject
-        application/x-font-ttf
+# Create application user
+echo "👤 Creating portfolio user..."
+useradd -m -s /bin/bash portfolio || echo "User already exists"
+usermod -aG sudo portfolio
+
+# Create application directory
+echo "📁 Setting up application directory..."
+mkdir -p /var/www/portfolio
+chown portfolio:portfolio /var/www/portfolio
+
+# Setup firewall
+echo "🔥 Configuring firewall..."
+ufw --force enable
+ufw allow 22    # SSH
+ufw allow 80    # HTTP
+ufw allow 443   # HTTPS
+
+# Start and enable services
+echo "🚀 Starting services..."
+systemctl start nginx
+systemctl enable nginx
+
+echo "✅ Server setup complete!"
+echo ""
+echo "Next steps:"
+echo "1. Switch to portfolio user: su - portfolio"
+echo "2. Navigate to app directory: cd /var/www/portfolio"
+echo "3. Clone your repository: git clone https://github.com/giorgi0203/portfolio.git ."
+echo "4. Install dependencies: npm install"
+echo "5. Follow the deployment guide to configure Nginx and PM2"
+echo ""
+echo "Remember to:"
+echo "- Configure your domain DNS records"
+echo "- Setup SSL certificates with certbot"
+echo "- Configure nginx virtual host for your domain"
         application/x-web-app-manifest+json
         application/xhtml+xml
         application/xml

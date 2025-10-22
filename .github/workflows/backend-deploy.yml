@@ -1,0 +1,318 @@
+name: Deploy Backend to DigitalOcean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/portfolio-api/**'
+      - 'libs/shared-types/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  BACKEND_PROJECT: 'portfolio-api'
+  SHARED_TYPES_PROJECT: 'shared-types'
+
+jobs:
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test shared types
+        run: npx nx test ${{ env.SHARED_TYPES_PROJECT }}
+
+      - name: Lint backend
+        run: npx nx lint ${{ env.BACKEND_PROJECT }}
+
+      - name: Test backend
+        run: npx nx test ${{ env.BACKEND_PROJECT }}
+
+      - name: E2E test backend
+        run: npx nx e2e ${{ env.BACKEND_PROJECT }}-e2e
+
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: test-backend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared types
+        run: npx nx build ${{ env.SHARED_TYPES_PROJECT }}
+
+      - name: Build backend
+        run: npx nx build ${{ env.BACKEND_PROJECT }} --configuration=production
+
+      - name: Upload backend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            dist/apps/portfolio-api/
+            dist/libs/shared-types/
+          retention-days: 1
+
+  deploy-backend:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    needs: build-backend
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: dist/
+
+      # Test connectivity before deployment
+      - name: Test Droplet Connectivity
+        run: |
+          echo "Testing connectivity to droplet..."
+          ping -c 3 ${{ secrets.DROPLET_HOST }} || echo "Ping failed but continuing..."
+          timeout 10s bash -c "</dev/tcp/${{ secrets.DROPLET_HOST }}/22" && echo "Port 22 is open" || echo "Port 22 connection failed"
+        continue-on-error: true
+
+      # Prepare deployment on server
+      - name: Prepare Backend Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+          debug: true
+          script: |
+            echo "=== Backend Deployment Started ==="
+            echo "Connected to: $(hostname)"
+            echo "User: $(whoami)"
+            echo "Current directory: $(pwd)"
+            
+            # Create backend directory if it doesn't exist
+            echo "Creating backend directory..."
+            sudo mkdir -p /var/www/portfolio-api
+            
+            # Check if PM2 process is running
+            echo "Checking PM2 process status..."
+            if pm2 list | grep -q "portfolio-api"; then
+              echo "Stopping portfolio-api PM2 process..."
+              pm2 stop portfolio-api || echo "Failed to stop PM2 process"
+            else
+              echo "No existing PM2 process found"
+            fi
+            
+            # Backup current deployment
+            echo "Backing up current deployment..."
+            sudo rm -rf /var/www/portfolio-api/backup
+            if [ -d "/var/www/portfolio-api/current" ]; then
+              sudo mv /var/www/portfolio-api/current /var/www/portfolio-api/backup
+              echo "Backup created"
+            else
+              echo "No current deployment to backup"
+            fi
+            
+            # Create new deployment directory
+            echo "Creating new deployment directory..."
+            sudo mkdir -p /var/www/portfolio-api/current
+            sudo chown -R $USER:www-data /var/www/portfolio-api/current
+            echo "Backend deployment directory prepared"
+
+      # Copy backend files to server
+      - name: Copy Backend Files to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          debug: true
+          source: "dist/apps/portfolio-api/*"
+          target: "/var/www/portfolio-api/current/"
+          strip_components: 3
+
+      # Copy shared types to server
+      - name: Copy Shared Types to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          debug: true
+          source: "dist/libs/shared-types"
+          target: "/var/www/portfolio-api/current/"
+          strip_components: 1
+
+      # Copy configuration files
+      - name: Copy Configuration Files
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          debug: true
+          source: "package.json,package-lock.json,ecosystem.config.js"
+          target: "/var/www/portfolio-api/current/"
+
+      # Finalize backend deployment
+      - name: Finalize Backend Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          command_timeout: 10m
+          debug: true
+          script: |
+            echo "=== Finalizing Backend Deployment ==="
+            
+            # Verify files were copied
+            echo "Checking deployed backend files..."
+            ls -la /var/www/portfolio-api/current/
+            
+            # Set proper permissions
+            echo "Setting file permissions..."
+            sudo chown -R www-data:www-data /var/www/portfolio-api/current
+            sudo chmod -R 755 /var/www/portfolio-api/current
+            
+            # Install production dependencies
+            echo "Installing production dependencies..."
+            cd /var/www/portfolio-api/current
+            sudo -u www-data npm ci --only=production --silent
+            
+            # Create logs directory for PM2
+            echo "Creating logs directory..."
+            sudo mkdir -p /var/log/pm2
+            sudo chown -R $USER:$USER /var/log/pm2
+            
+            # Start PM2 process
+            echo "Starting PM2 process..."
+            cd /var/www/portfolio-api/current
+            pm2 start ecosystem.config.js --env production || pm2 restart portfolio-api
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Wait for application to start
+            echo "Waiting for application to start..."
+            sleep 10
+            
+            # Health check
+            echo "Running health check..."
+            if curl -f http://localhost:3000/api/health; then
+              echo "✅ Backend health check passed!"
+            else
+              echo "❌ Backend health check failed!"
+              echo "Rolling back to backup..."
+              if [ -d "/var/www/portfolio-api/backup" ]; then
+                sudo rm -rf /var/www/portfolio-api/current
+                sudo mv /var/www/portfolio-api/backup /var/www/portfolio-api/current
+                pm2 restart portfolio-api
+                sleep 5
+                curl -f http://localhost:3000/api/health && echo "Rollback successful" || echo "Rollback failed"
+              fi
+              exit 1
+            fi
+            
+            # Show PM2 status
+            echo "PM2 Status:"
+            pm2 list
+            
+            echo "=== Backend Deployment Complete ==="
+
+      # Verify deployment
+      - name: Verify Backend Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 60s
+          command_timeout: 2m
+          debug: true
+          script: |
+            echo "=== Verifying Backend Deployment ==="
+            
+            # Check PM2 status
+            echo "PM2 Status:"
+            pm2 list
+            
+            # Test API endpoints
+            echo "Testing API endpoints..."
+            curl -f http://localhost:3000/api/health || exit 1
+            curl -f http://localhost:3000/api/projects || exit 1
+            curl -f http://localhost:3000/api/skills || exit 1
+            
+            echo "✅ All API endpoints responding correctly!"
+            echo "🚀 Backend deployment verification complete!"
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [test-backend, build-backend, deploy-backend]
+    if: always()
+    
+    steps:
+      - name: Deployment Success
+        if: needs.deploy-backend.result == 'success'
+        run: |
+          echo "🚀 Backend deployment successful!"
+          echo "API Documentation: https://giorgi.app/api/docs"
+          echo "Health Check: https://giorgi.app/api/health"
+
+      - name: Deployment Failure
+        if: needs.deploy-backend.result == 'failure'
+        run: |
+          echo "❌ Backend deployment failed!"
+          exit 1

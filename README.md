@@ -4,20 +4,22 @@ A modern, animated portfolio website built with Angular and NestJS using Nx mono
 
 ## 🚀 Features
 
+- **Full-Stack Architecture**: Angular frontend with NestJS backend API
+- **Interactive API Documentation**: Swagger/OpenAPI documentation with live testing
 - **Animated Background**: Beautiful gradient background with floating particles
 - **Smooth Animations**: Fade-in, slide-in, and stagger animations using Angular Animations
 - **Responsive Design**: Mobile-first approach with Tailwind CSS responsive utilities
 - **Modern UI**: Glassmorphism effects, gradient buttons, and smooth transitions using Tailwind
 - **Interactive Showroom**: Project showcase with hover effects and overlay actions
 - **Skills Section**: Animated progress bars showing skill proficiency
-- **Contact Form**: Ready-to-use contact form with Tailwind styling
+- **Contact Form**: Ready-to-use contact form with backend API integration
 - **Smooth Scrolling**: Navigation with smooth scroll to sections
 - **CI/CD Pipeline**: Automated deployment to DigitalOcean droplet
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Angular 20 (Standalone Components)
-- **Backend**: NestJS (ready for future API development)
+- **Backend**: NestJS with Swagger/OpenAPI documentation
 - **Styling**: Tailwind CSS v4+ with CSS-first configuration
 - **Build Tool**: Nx 21.2.2 (Monorepo)
 - **Deployment**: DigitalOcean Droplet with Nginx
@@ -45,12 +47,52 @@ A modern, animated portfolio website built with Angular and NestJS using Nx mono
 npm install
 ```
 
-3. Start the development server:
+3. Start the development servers:
+
+**Frontend** (Angular):
 ```bash
 npx nx serve portfolio
 ```
+Open your browser to `http://localhost:4200`
 
-4. Open your browser to `http://localhost:4200`
+**Backend** (NestJS API):
+```bash
+npx nx serve portfolio-api
+```
+API available at `http://localhost:3000`
+
+## 🔗 API Documentation
+
+The backend provides a RESTful API with interactive Swagger documentation:
+
+**API Documentation**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+
+### Available Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check endpoint |
+| GET | `/api/projects` | Get all portfolio projects |
+| GET | `/api/skills` | Get skills and proficiency levels |
+| POST | `/api/contact` | Submit contact form |
+
+### Example API Calls
+
+```bash
+# Health check
+curl http://localhost:3000/api/health
+
+# Get projects
+curl http://localhost:3000/api/projects
+
+# Get skills
+curl http://localhost:3000/api/skills
+
+# Submit contact form
+curl -X POST http://localhost:3000/api/contact \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"john@example.com","subject":"Hello","message":"Test message"}'
+```
 
 ## 📝 Customization
 

@@ -1,55 +1,428 @@
-# Portfolio Deployment Guide
+# Portfolio Deployment Guide - DigitalOcean
 
-## DigitalOcean Droplet Setup
+This guide covers deploying both the Angular frontend and NestJS backend to DigitalOcean.
 
-### 1. Create a DigitalOcean Droplet
+## Project Structure
 
-1. Create a new Ubuntu 22.04 droplet on DigitalOcean
-2. Choose appropriate size (Basic plan with 1GB RAM should be sufficient)
-3. Add your SSH key for access
-4. Note down the droplet's IP address
-
-### 2. Server Setup
-
-Run the setup script on your droplet:
-
-```bash
-# SSH into your droplet
-ssh root@YOUR_DROPLET_IP
-
-# Download and run the setup script
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/portfolio/master/scripts/setup-server.sh | bash
-
-# Or copy the script manually and run it
-chmod +x setup-server.sh
-./setup-server.sh
+```
+portfolio/
+├── apps/
+│   ├── portfolio/           # Angular frontend
+│   ├── portfolio-api/       # NestJS backend  
+│   └── portfolio-api-e2e/   # E2E tests
+├── libs/
+│   └── shared-types/        # Shared TypeScript interfaces
+└── scripts/
+    └── setup-server.sh      # Server setup script
 ```
 
-### 3. Configure GitHub Secrets
+## CI/CD Workflows
 
-Add the following secrets to your GitHub repository (Settings > Secrets and variables > Actions):
+This project includes **two separate GitHub Actions workflows** for automated deployment:
 
-- `DROPLET_HOST`: Your droplet's IP address
-- `DROPLET_USERNAME`: SSH username (usually `root`)
-- `DROPLET_SSH_KEY`: Your private SSH key (see instructions below)
-- `DROPLET_PORT`: SSH port (22 by default)
+### Frontend Deployment (`.github/workflows/ci.yml`)
+- **Triggers**: Any push to `main` branch
+- **Deploys**: Angular frontend to `/var/www/portfolio/current/`
+- **Server**: Nginx serves static files
 
-### 4. Generate SSH Key for GitHub Actions
+### Backend Deployment (`.github/workflows/backend-deploy.yml`)
+- **Triggers**: Push to `main` with backend changes (`apps/portfolio-api/**`, `libs/shared-types/**`)
+- **Deploys**: NestJS API to `/var/www/portfolio-api/current/`
+- **Server**: PM2 process manager with auto-restart
 
-On your droplet, generate a dedicated SSH key for GitHub Actions:
+Both workflows use the same GitHub secrets and `appleboy/ssh-action` for consistent deployment.
 
+## Prerequisites
+
+- DigitalOcean account
+- Domain name (e.g., giorgi.app)
+- SSH key for server access
+- Node.js 20+ for local development
+- GitHub repository with configured secrets
+
+## Step 1: Create DigitalOcean Droplet
+
+1. **Create Droplet**:
+   - Image: Ubuntu 22.04 LTS
+   - Size: Basic $12/month (2GB RAM, 1 vCPU)
+   - Region: Choose closest to your users
+   - Authentication: Add your SSH key
+   - Hostname: `portfolio-server`
+
+2. **Enable IPv6** (for Starlink compatibility):
+   - In Droplet settings → Networking
+   - Enable IPv6 support
+
+## Step 2: Initial Server Setup
+
+SSH into your droplet:
 ```bash
-# Generate SSH key
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/github_actions
-
-# Add public key to authorized_keys
-cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
-
-# Display private key (copy this to GitHub secrets)
-cat ~/.ssh/github_actions
+ssh root@your-droplet-ip
 ```
 
-### 5. Configure Domain (Optional)
+### Update system and install dependencies:
+```bash
+# Update system
+apt update && apt upgrade -y
+
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+apt-get install -y nodejs
+
+# Install nginx
+apt install nginx -y
+
+# Install PM2 for process management
+npm install -g pm2
+
+# Install certbot for SSL
+apt install certbot python3-certbot-nginx -y
+
+# Create application user
+useradd -m -s /bin/bash portfolio
+usermod -aG sudo portfolio
+```
+
+## Step 3: Setup Application Directory
+
+```bash
+# Create application directory
+mkdir -p /var/www/portfolio
+chown portfolio:portfolio /var/www/portfolio
+
+## Step 5: Configure Nginx
+
+Create nginx configuration:
+```bash
+sudo nano /etc/nginx/sites-available/portfolio
+```
+
+Add this configuration:
+```nginx
+server {
+    listen 80;
+    listen [::]:80;  # IPv6 support
+    server_name giorgi.app www.giorgi.app;
+
+    # Frontend (Angular)
+    root /var/www/portfolio/dist/apps/portfolio;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # Frontend routes
+    location / {
+        try_files $uri $uri/ /index.html;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # API routes to backend
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+```
+
+Enable the site:
+```bash
+sudo ln -s /etc/nginx/sites-available/portfolio /etc/nginx/sites-enabled/
+sudo nginx -t  # Test configuration
+sudo systemctl restart nginx
+```
+
+## Step 6: Setup Backend with PM2
+
+Create PM2 ecosystem file:
+```bash
+nano /var/www/portfolio/ecosystem.config.js
+```
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'portfolio-api',
+    script: './dist/apps/portfolio-api/main.js',
+    cwd: '/var/www/portfolio',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true
+  }]
+};
+```
+
+Start the backend:
+```bash
+# Create logs directory
+mkdir -p /var/www/portfolio/logs
+
+# Start backend with PM2
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup  # Follow the instructions to enable auto-start
+```
+
+## Step 7: Configure DNS
+
+In your DNS provider (or DigitalOcean DNS):
+
+### IPv4 Records:
+```
+Type: A
+Name: @
+Value: your-droplet-ipv4
+TTL: 3600
+
+Type: A
+Name: www
+Value: your-droplet-ipv4
+TTL: 3600
+```
+
+### IPv6 Records (for Starlink compatibility):
+```
+Type: AAAA
+Name: @
+Value: your-droplet-ipv6
+TTL: 3600
+
+Type: AAAA
+Name: www
+Value: your-droplet-ipv6
+TTL: 3600
+```
+
+## Step 8: Setup SSL Certificate
+
+```bash
+# Generate SSL certificates
+sudo certbot --nginx -d giorgi.app -d www.giorgi.app
+
+# Test auto-renewal
+sudo certbot renew --dry-run
+```
+
+## Step 9: Setup Firewall
+
+```bash
+# Enable UFW firewall
+sudo ufw enable
+
+# Allow necessary ports
+sudo ufw allow 22    # SSH
+sudo ufw allow 80    # HTTP
+sudo ufw allow 443   # HTTPS
+
+# Check status
+sudo ufw status
+```
+
+## Step 10: Create Deployment Script
+
+Create automated deployment script:
+```bash
+nano /var/www/portfolio/deploy.sh
+```
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Starting deployment..."
+
+# Pull latest changes
+git pull origin main
+
+# Install dependencies
+npm ci
+
+# Build applications
+echo "📦 Building applications..."
+npx nx build shared-types
+npx nx build portfolio --configuration=production
+npx nx build portfolio-api --configuration=production
+
+# Restart backend
+echo "🔄 Restarting backend..."
+pm2 restart portfolio-api
+
+# Reload nginx
+echo "🔄 Reloading nginx..."
+sudo nginx -s reload
+
+echo "✅ Deployment complete!"
+```
+
+Make it executable:
+```bash
+chmod +x /var/www/portfolio/deploy.sh
+```
+
+## Development Workflow
+
+### Local Development:
+```bash
+# Start frontend
+npx nx serve portfolio
+
+# Start backend
+npx nx serve portfolio-api
+
+# Both will be available at:
+# Frontend: http://localhost:4200
+# Backend: http://localhost:3000
+```
+
+### API Endpoints:
+- `GET /api/health` - Health check
+- `GET /api/projects` - Get portfolio projects
+- `GET /api/skills` - Get skills data
+- `POST /api/contact` - Submit contact form
+- `GET /api/docs` - Interactive API documentation (Swagger UI)
+
+### Deployment:
+```bash
+# SSH to server
+ssh portfolio@your-droplet-ip
+
+# Navigate to project
+cd /var/www/portfolio
+
+# Run deployment script
+./deploy.sh
+```
+
+## Monitoring
+
+### Check Backend Status:
+```bash
+pm2 status
+pm2 logs portfolio-api
+```
+
+### Check Nginx Status:
+```bash
+sudo systemctl status nginx
+sudo nginx -t
+```
+
+### View Logs:
+```bash
+# Nginx access logs
+sudo tail -f /var/log/nginx/access.log
+
+# Nginx error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Backend logs
+pm2 logs portfolio-api
+```
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **Port 3000 already in use**:
+   ```bash
+   sudo lsof -ti:3000 | xargs sudo kill -9
+   pm2 restart portfolio-api
+   ```
+
+2. **Nginx configuration error**:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+3. **SSL certificate issues**:
+   ```bash
+   sudo certbot renew
+   sudo systemctl reload nginx
+   ```
+
+4. **Backend not responding**:
+   ```bash
+   pm2 restart portfolio-api
+   pm2 logs portfolio-api
+   ```
+
+## Performance Optimization
+
+### Enable Gzip compression in nginx (already in config above)
+### Use PM2 clustering for better performance:
+```javascript
+// In ecosystem.config.js
+instances: 'max', // Use all CPU cores
+exec_mode: 'cluster'
+```
+
+### Setup monitoring:
+```bash
+# Install PM2 monitoring
+pm2 install pm2-server-monit
+```
+
+## Security Best Practices
+
+1. **Regular updates**:
+   ```bash
+   sudo apt update && sudo apt upgrade
+   ```
+
+2. **Firewall rules**:
+   ```bash
+   sudo ufw status
+   ```
+
+3. **SSL certificate auto-renewal**:
+   ```bash
+   sudo crontab -e
+   # Add: 0 12 * * * /usr/bin/certbot renew --quiet
+   ```
+
+4. **Regular backups**:
+   ```bash
+   # Backup application
+   tar -czf portfolio-backup-$(date +%Y%m%d).tar.gz /var/www/portfolio
+   ```
+
+## Cost Optimization
+
+- **Basic Droplet**: $12/month for 2GB RAM
+- **DNS**: Free with DigitalOcean
+- **SSL**: Free with Let's Encrypt
+- **Total**: ~$12/month
+
+This setup provides a robust, scalable deployment for your portfolio with both frontend and backend running efficiently on a single DigitalOcean droplet.
 
 If you have a domain name:
 
