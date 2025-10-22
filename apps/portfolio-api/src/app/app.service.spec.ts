@@ -12,9 +12,55 @@ describe('AppService', () => {
     service = app.get<AppService>(AppService);
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
-      expect(service.getData()).toEqual({ message: 'Hello API' });
+  describe('getProjects', () => {
+    it('should return an array of projects', () => {
+      const projects = service.getProjects();
+      expect(Array.isArray(projects)).toBe(true);
+      expect(projects.length).toBeGreaterThan(0);
+      expect(projects[0]).toHaveProperty('id');
+      expect(projects[0]).toHaveProperty('title');
+      expect(projects[0]).toHaveProperty('description');
+      expect(projects[0]).toHaveProperty('technologies');
+    });
+  });
+
+  describe('getSkills', () => {
+    it('should return an array of skills', () => {
+      const skills = service.getSkills();
+      expect(Array.isArray(skills)).toBe(true);
+      expect(skills.length).toBeGreaterThan(0);
+      expect(skills[0]).toHaveProperty('id');
+      expect(skills[0]).toHaveProperty('name');
+      expect(skills[0]).toHaveProperty('category');
+      expect(skills[0]).toHaveProperty('level');
+    });
+  });
+
+  describe('submitContact', () => {
+    it('should return success response for valid contact data', () => {
+      const contactData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        subject: 'Test Subject',
+        message: 'Test message'
+      };
+      
+      const response = service.submitContact(contactData);
+      expect(response).toHaveProperty('success', true);
+      expect(response).toHaveProperty('message');
+    });
+
+    it('should return error response for invalid contact data', () => {
+      const contactData = {
+        name: '',
+        email: 'john@example.com',
+        subject: 'Test Subject',
+        message: ''
+      };
+      
+      const response = service.submitContact(contactData);
+      expect(response).toHaveProperty('success', false);
+      expect(response).toHaveProperty('message');
     });
   });
 });
