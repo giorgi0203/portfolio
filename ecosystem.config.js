@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'portfolio-api',
       script: './main.js',
-      cwd: '/var/www/portfolio-api',
+      cwd: '/var/www/portfolio-api/current',
       instances: 1,
       exec_mode: 'cluster',
       env: {
