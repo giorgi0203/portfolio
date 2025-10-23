@@ -197,7 +197,7 @@ jobs:
           port: 22
           timeout: 60s
           debug: true
-          source: "package.json,package-lock.json,ecosystem.config.js"
+          source: "ecosystem.config.js"
           target: "/var/www/portfolio-api/current/"
 
       # Finalize backend deployment
@@ -224,12 +224,8 @@ jobs:
             sudo chown -R www-data:www-data /var/www/portfolio-api/current
             sudo chmod -R 755 /var/www/portfolio-api/current
             
-            # Install ALL dependencies (not just production)
-            echo "Installing dependencies..."
-            cd /var/www/portfolio-api/current
-            sudo -u www-data npm ci --silent
-
-            ls -la node_modules/@nestjs/common
+            # No dependencies needed - Express app is fully bundled!
+            echo "✅ Express app is fully bundled - no dependencies to install"
             
             # Create logs directory for PM2
             echo "Creating logs directory..."
@@ -274,8 +270,6 @@ jobs:
                   if [ -d "/var/www/portfolio-api/backup" ]; then
                     sudo rm -rf /var/www/portfolio-api/current
                     sudo mv /var/www/portfolio-api/backup /var/www/portfolio-api/current
-                    cd /var/www/portfolio-api/current
-                    sudo -u www-data npm ci --silent
                     cd /home/$USER
                     pm2 restart portfolio-api
                     sleep 5

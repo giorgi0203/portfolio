@@ -5,9 +5,6 @@ module.exports = {
   output: {
     path: join(__dirname, '../../dist/portfolio-api'),
     clean: true,
-    ...(process.env.NODE_ENV !== 'production' && {
-      devtoolModuleFilenameTemplate: '[absolute-resource-path]',
-    }),
   },
   plugins: [
     new NxAppWebpackPlugin({
@@ -18,8 +15,15 @@ module.exports = {
       assets: ['./src/assets'],
       optimization: process.env.NODE_ENV === 'production',
       outputHashing: 'none',
-      generatePackageJson: true, // Generate optimized package.json with runtime dependencies
+      externalDependencies: "none",
+      generatePackageJson: false, // We'll bundle everything - Fastify is simple!
       sourceMaps: process.env.NODE_ENV !== 'production',
     }),
   ],
+  // Bundle everything - Fastify doesn't have complex dependencies like NestJS
+  externals: {},
+  resolve: {
+    extensions: ['.ts', '.js', '.json'],
+  },
+  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
 };
