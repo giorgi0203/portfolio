@@ -16,10 +16,10 @@ module.exports = {
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
       assets: ['./src/assets'],
-      optimization: false,
+      optimization: process.env.NODE_ENV === 'production',
       outputHashing: 'none',
-      generatePackageJson: true,
-      sourceMaps: true,
+      generatePackageJson: true, // Generate optimized package.json with runtime dependencies
+      sourceMaps: process.env.NODE_ENV !== 'production',
     }),
   ],
 };

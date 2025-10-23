@@ -227,8 +227,8 @@ jobs:
             # Install ALL dependencies (not just production)
             echo "Installing dependencies..."
             cd /var/www/portfolio-api/current
-            npm ci --silent
-            ls -la /var/www/portfolio-api/current/
+            sudo -u www-data npm ci --silent
+
             ls -la node_modules/@nestjs/common
             
             # Create logs directory for PM2
