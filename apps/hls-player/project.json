@@ -7,11 +7,12 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@angular/build:application",
+      "executor": "@nx/angular:webpack-browser",
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/hls-player",
-        "browser": "apps/hls-player/src/main.ts",
+        "index": "apps/hls-player/src/index.html",
+        "main": "apps/hls-player/src/main.ts",
         "polyfills": ["zone.js"],
         "tsConfig": "apps/hls-player/tsconfig.app.json",
         "assets": [
@@ -20,7 +21,11 @@
             "input": "apps/hls-player/public"
           }
         ],
-        "styles": ["apps/hls-player/src/styles.css"]
+        "styles": ["apps/hls-player/src/styles.css"],
+        "scripts": [],
+        "customWebpackConfig": {
+          "path": "apps/hls-player/webpack.config.ts"
+        }
       },
       "configurations": {
         "production": {
@@ -36,7 +41,10 @@
               "maximumError": "8kb"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "customWebpackConfig": {
+            "path": "apps/hls-player/webpack.prod.config.ts"
+          }
         },
         "development": {
           "optimization": false,
@@ -47,8 +55,11 @@
       "defaultConfiguration": "production"
     },
     "serve": {
-      "continuous": true,
-      "executor": "@angular/build:dev-server",
+      "executor": "@nx/angular:module-federation-dev-server",
+      "options": {
+        "port": 4201,
+        "publicHost": "http://localhost:4201"
+      },
       "configurations": {
         "production": {
           "buildTarget": "hls-player:build:production"
