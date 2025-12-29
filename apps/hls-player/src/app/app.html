@@ -1,0 +1,264 @@
+<div class="min-h-screen bg-gray-900 text-white p-4">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-center mb-8">{{ title }}</h1>
+    
+    <!-- Video URL Input -->
+    <div class="mb-6">
+      <label for="videoUrl" class="block text-sm font-medium mb-2">Video URL (HLS Stream)</label>
+      <div class="flex gap-2">
+        <input 
+          #urlInput
+          type="url" 
+          id="videoUrl"
+          [value]="videoUrl"
+          class="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter HLS stream URL"
+        />
+        <button 
+          (click)="changeVideoUrl(urlInput.value)"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors"
+        >
+          Load
+        </button>
+      </div>
+      
+      <!-- Preset URLs -->
+      <div class="mt-2">
+        <p class="text-sm text-gray-400 mb-2">Sample streams:</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button 
+            (click)="changeVideoUrl('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Tears of Steel
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Big Buck Bunny
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Sintel
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Multi-Audio
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Live Stream
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://d2zihajmogu5jn.cloudfront.net/bipbop-advanced/bipbop_16x9_variant.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Apple Test
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/master.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            Multi-Quality
+          </button>
+          <button 
+            (click)="changeVideoUrl('https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8')"
+            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+          >
+            With Subtitles
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Player Container -->
+    <div class="relative bg-black rounded-lg overflow-hidden shadow-2xl">
+      <!-- Video Element -->
+      <video 
+        #videoElement
+        class="w-full h-auto max-h-[70vh]"
+        [class.cursor-pointer]="!isLoading && !hasError"
+        (click)="togglePlay()"
+        preload="metadata"
+        crossorigin="anonymous"
+      >
+        Your browser does not support the video tag.
+      </video>
+
+      <!-- Loading Overlay -->
+      <div 
+        *ngIf="isLoading" 
+        class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75"
+      >
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p class="text-lg">Loading video...</p>
+        </div>
+      </div>
+
+      <!-- Error Overlay -->
+      <div 
+        *ngIf="hasError" 
+        class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75"
+      >
+        <div class="text-center text-red-500">
+          <div class="text-6xl mb-4">⚠️</div>
+          <h3 class="text-xl font-semibold mb-2">Error Loading Video</h3>
+          <p class="text-sm">{{ errorMessage }}</p>
+        </div>
+      </div>
+
+      <!-- Video Controls -->
+      <div 
+        *ngIf="!isLoading && !hasError" 
+        class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4"
+      >
+        <!-- Progress Bar -->
+        <div class="mb-4">
+          <input 
+            type="range" 
+            min="0" 
+            [max]="duration" 
+            [value]="currentTime"
+            (input)="onSeek($event)"
+            class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+          />
+          <div class="flex justify-between text-xs text-gray-300 mt-1">
+            <span>{{ formatTime(currentTime) }}</span>
+            <span>{{ formatTime(duration) }}</span>
+          </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <!-- Play/Pause Button -->
+            <button 
+              (click)="togglePlay()"
+              class="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+            >
+              <span class="text-xl">{{ isPlaying ? '⏸️' : '▶️' }}</span>
+            </button>
+
+            <!-- Volume Control -->
+            <div class="flex items-center space-x-2">
+              <button 
+                (click)="toggleMute()"
+                class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
+              >
+                <span>{{ isMuted ? '🔇' : '🔊' }}</span>
+              </button>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1"
+                [value]="volume"
+                (input)="onVolumeChange($event)"
+                class="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+              />
+            </div>
+
+            <!-- Time Display -->
+            <div class="text-sm text-gray-300">
+              {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <!-- Quality Selector -->
+            <div class="flex items-center space-x-2">
+              <label for="qualitySelect" class="text-sm text-gray-300">Quality:</label>
+              <select 
+                id="qualitySelect"
+                [value]="selectedQuality"
+                (change)="onQualityChange($event)"
+                class="bg-gray-800 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="-1">Auto</option>
+                <option 
+                  *ngFor="let quality of qualityLevels" 
+                  [value]="quality.index"
+                >
+                  {{ quality.name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Audio Track Selector -->
+            <div 
+              *ngIf="audioTracks.length > 1" 
+              class="flex items-center space-x-2"
+            >
+              <label for="audioSelect" class="text-sm text-gray-300">Audio:</label>
+              <select 
+                id="audioSelect"
+                [value]="selectedAudioTrack"
+                (change)="onAudioTrackChange($event)"
+                class="bg-gray-800 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option 
+                  *ngFor="let track of audioTracks" 
+                  [value]="track.id"
+                >
+                  {{ track.name }} ({{ track.lang }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Fullscreen Button -->
+            <button 
+              (click)="toggleFullscreen()"
+              class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
+            >
+              <span>{{ isFullscreen ? '🔲' : '⛶' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Info -->
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h3 class="font-semibold mb-2">Video Info</h3>
+        <p>URL: <span class="text-gray-300 break-all">{{ videoUrl }}</span></p>
+        <p>Duration: <span class="text-gray-300">{{ formatTime(duration) }}</span></p>
+      </div>
+
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h3 class="font-semibold mb-2">Quality Levels</h3>
+        <div *ngIf="qualityLevels.length > 0; else noQualities">
+          <p *ngFor="let quality of qualityLevels" class="text-gray-300">
+            {{ quality.name }}
+          </p>
+        </div>
+        <ng-template #noQualities>
+          <p class="text-gray-500">No quality levels available</p>
+        </ng-template>
+      </div>
+
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h3 class="font-semibold mb-2">Audio Tracks</h3>
+        <div *ngIf="audioTracks.length > 0; else noAudio">
+          <p *ngFor="let track of audioTracks" class="text-gray-300">
+            {{ track.name }} ({{ track.lang }})
+            <span *ngIf="track.isDefault" class="text-blue-400">[Default]</span>
+          </p>
+        </div>
+        <ng-template #noAudio>
+          <p class="text-gray-500">No audio tracks available</p>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>
+
+<router-outlet></router-outlet>

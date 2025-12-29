@@ -69,11 +69,7 @@ describe('App', () => {
     expect(typeof app.downloadResume).toBe('function');
   });
 
-  it('should have contactMe method', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(typeof app.contactMe).toBe('function');
-  });
+
 
   describe('Component methods', () => {
     it('should call scrollToSection without errors', () => {
@@ -97,15 +93,6 @@ describe('App', () => {
       expect(consoleSpy).toHaveBeenCalledWith('Download resume clicked');
     });
 
-    it('should call contactMe without errors', () => {
-      const fixture = TestBed.createComponent(App);
-      const app = fixture.componentInstance;
-      
-      // Spy on console.log to verify the method is called
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-      
-      app.contactMe();
-      expect(consoleSpy).toHaveBeenCalledWith('Contact me clicked');
-    });
+
   });
 });

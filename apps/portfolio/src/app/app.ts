@@ -1,11 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trigger, style, transition, animate, stagger, query } from '@angular/animations';
+import { ApiService, Project, Skill, ContactFormData } from './services/api.service';
 
 @Component({
-  imports: [RouterModule, CommonModule],
   selector: 'app-root',
+  imports: [RouterModule, CommonModule, ReactiveFormsModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
   animations: [
@@ -39,59 +41,127 @@ import { trigger, style, transition, animate, stagger, query } from '@angular/an
     ])
   ]
 })
-export class App {
+export class App implements OnInit {
   protected title = 'Giorgi Arabuli';
+
+  // Dynamic data from API
+    projects: Project[] = [];
+    skills: Skill[] = [];
+    private apiService = inject(ApiService);
+    private fb = inject(FormBuilder);
+    contactForm: FormGroup = this.fb.group({
+      name: ['', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
+      subject: [''],
+      message: ['', [Validators.required]]
+    });
+    contactSubmitting = false;
+    contactMessage = '';
   
-  // Portfolio data
-  skills = [
-    { name: 'Angular', level: 95, icon: '⚡' },
-    { name: 'TypeScript', level: 90, icon: '🎯' },
-    { name: 'Node.js', level: 85, icon: '🚀' },
-    { name: 'NestJS', level: 88, icon: '🔥' },
-    { name: 'MongoDB', level: 80, icon: '🍃' },
-    { name: 'PostgreSQL', level: 82, icon: '🐘' }
-  ];
-
-  projects = [
-    {
-      title: 'Task Management App',
-      description: 'Collaborative task management with real-time updates',
-      image: 'https://via.placeholder.com/400x250/764ba2/ffffff?text=Task+Management',
-      technologies: ['Angular', 'Socket.IO', 'MongoDB', 'Express'],
-      demoUrl: '#',
-      codeUrl: '#'
-    },
-    {
-      title: 'Analytics Dashboard',
-      description: 'Data visualization dashboard with interactive charts',
-      image: 'https://via.placeholder.com/400x250/f093fb/ffffff?text=Analytics+Dashboard',
-      technologies: ['Angular', 'D3.js', 'Firebase', 'Chart.js'],
-      demoUrl: '#',
-      codeUrl: '#'
-    }
-  ];
-
+  // About me data
   aboutMe = {
-    name: 'Your Name',
+    name: 'Giorgi Arabuli',
     title: 'Full Stack Developer',
     description: `I'm a passionate full-stack developer with expertise in modern web technologies. 
-    I love creating beautiful, responsive applications that solve real-world problems. 
-    With a strong foundation in Angular, NestJS, and database technologies, I build 
-    scalable and maintainable solutions.`,
+                  I love creating innovative solutions that solve real-world problems and deliver 
+                  exceptional user experiences.`,
+    experience: '5+ years',
+    projects: '50+',
+    technologies: '15+',
     location: 'Your Location',
-    email: 'your.email@example.com',
-    github: 'https://github.com/yourusername',
-    linkedin: 'https://linkedin.com/in/yourusername'
-  };
+    email: 'giorgi@example.com',
+    github: 'https://github.com/giorgi0203',
+    linkedin: 'https://linkedin.com/in/giorgi-arabuli'
+  };    socialLinks = [
+      { name: 'GitHub', url: 'https://github.com/giorgi0203', icon: '🐙' },
+      { name: 'LinkedIn', url: 'https://linkedin.com/in/giorgi-arabuli', icon: '💼' },
+      { name: 'Twitter', url: 'https://twitter.com/giorgi0203', icon: '🐦' },
+      { name: 'Email', url: 'mailto:giorgi@example.com', icon: '📧' }
+    ];
+  
+    // Animated background particles
+    particles = Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 4 + 1,
+      speed: Math.random() * 2 + 1
+    }));
+  
+    ngOnInit() {
+    this.loadProjects();
+    this.loadSkills();
+  }
 
-  // Animated background particles
-  particles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 1,
-    speed: Math.random() * 2 + 1
-  }));
+  loadProjects() {
+    this.apiService.getProjects().subscribe({
+      next: (projects) => {
+        this.projects = projects;
+      },
+      error: (error) => {
+        console.error('Error loading projects:', error);
+        // Fallback data
+        this.projects = [
+          {
+            id: 1,
+            title: "hls - player",
+            description: "A modern, responsive portfolio website built with Angular and Express",
+            technologies: ["Angular", "Express.js", "TypeScript", "Tailwind CSS", "Nx"],
+            githubUrl: "https://github.com/giorgi0203/portfolio",
+            liveUrl: "https://giorgi.app",
+            imageUrl: "/assets/portfolio-preview.jpg",
+            image: "/assets/portfolio-preview.jpg",
+            demoUrl: "https://giorgi.app",
+            codeUrl: "https://github.com/giorgi0203/portfolio"
+          }
+        ];
+      }
+    });
+  }
+
+  loadSkills() {
+    this.apiService.getSkills().subscribe({
+      next: (skills) => {
+        this.skills = skills;
+      },
+      error: (error) => {
+        console.error('Error loading skills:', error);
+        // Fallback data
+        this.skills = [
+          { id: 1, name: 'Angular', category: 'Frontend', level: 95, icon: '🅰️' },
+          { id: 2, name: 'TypeScript', category: 'Frontend', level: 90, icon: '📘' },
+          { id: 3, name: 'Node.js', category: 'Backend', level: 85, icon: '🟢' },
+          { id: 4, name: 'Express.js', category: 'Backend', level: 88, icon: '⚡' }
+        ];
+      }
+    });
+  }
+
+  onSubmitContact() {
+    if (this.contactForm.valid) {
+      this.contactSubmitting = true;
+      const formData: ContactFormData = this.contactForm.value;
+
+      this.apiService.submitContact(formData).subscribe({
+        next: (response) => {
+          this.contactMessage = response.message;
+          this.contactSubmitting = false;
+          if (response.success) {
+            this.contactForm.reset();
+          }
+        },
+        error: (error) => {
+          console.error('Error submitting contact form:', error);
+          this.contactMessage = 'Sorry, there was an error sending your message. Please try again.';
+          this.contactSubmitting = false;
+        }
+      });
+    }
+  }
+
+  getSkillsByCategory(category: string): Skill[] {
+    return this.skills.filter(skill => skill.category === category);
+  }
 
   scrollToSection(sectionId: string): void {
     const element = document.getElementById(sectionId);
@@ -101,12 +171,6 @@ export class App {
   }
 
   downloadResume(): void {
-    // Add your resume download logic here
     console.log('Download resume clicked');
-  }
-
-  contactMe(): void {
-    // Add contact form logic here
-    console.log('Contact me clicked');
   }
 }
