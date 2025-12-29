@@ -1,13 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trigger, style, transition, animate, stagger, query } from '@angular/animations';
 import { ApiService, Project, Skill, ContactFormData } from './services/api.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterModule, CommonModule, ReactiveFormsModule],
+  imports: [RouterModule, ReactiveFormsModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
   animations: [

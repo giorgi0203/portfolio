@@ -1,6 +1,6 @@
 import { Component, OnDestroy, ViewChild, ElementRef, afterNextRender } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import Hls from 'hls.js';
 
@@ -19,7 +19,7 @@ interface AudioTrack {
 }
 
 @Component({
-  imports: [RouterModule, CommonModule, FormsModule],
+  imports: [RouterModule, FormsModule],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',

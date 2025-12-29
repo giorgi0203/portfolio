@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   displayName: 'portfolio-api',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
