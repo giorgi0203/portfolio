@@ -1,5 +1,29 @@
-<ul class="remote-menu">
-  <li><a routerLink="/">Home</a></li>
-  <li><a routerLink="/hls-player">HLS Player</a></li>
-</ul>
+<div class="fixed inset-0 -z-10 bg-gradient-to-br from-primary-500 to-secondary-500 overflow-hidden">
+  @for (particle of particles; track particle.id) {
+    <div
+      class="particle w-1 h-1 bg-white/10 rounded-full animate-float"
+      [style.left.%]="particle.x"
+      [style.top.%]="particle.y"
+      [style.width.px]="particle.size"
+      [style.height.px]="particle.size"
+      [style.animation-duration.s]="particle.speed"
+    ></div>
+  }
+</div>
+
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-lg z-50 py-4 shadow-lg" [@fadeInUp]>
+  <div class="max-w-6xl mx-auto px-5 flex justify-between items-center">
+    <a routerLink="/" class="text-xl font-bold text-primary-500 no-underline cursor-pointer">{{ title }}</a>
+    <ul class="flex list-none gap-8">
+      <li>
+        <a routerLink="/" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Portfolio</a>
+      </li>
+      <li>
+        <a routerLink="/hls-player" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">HLS Player</a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
 <router-outlet></router-outlet>

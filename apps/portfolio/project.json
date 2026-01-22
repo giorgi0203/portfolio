@@ -11,7 +11,8 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/portfolio",
-        "browser": "apps/portfolio/src/main.ts",
+        "index": "apps/portfolio/src/index.html",
+        "main": "apps/portfolio/src/main.ts",
         "polyfills": ["zone.js"],
         "tsConfig": "apps/portfolio/tsconfig.app.json",
         "assets": [
