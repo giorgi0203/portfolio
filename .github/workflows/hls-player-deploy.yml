@@ -18,8 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  inspect-server:
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NX_DAEMON: 'false'
+      NX_ISOLATE_PLUGINS: 'false'
     steps:
       - name: Inspect droplet using existing deployment credentials
         uses: appleboy/ssh-action@v1.0.0
@@ -40,13 +44,6 @@ jobs:
             command -v certbot || true
             sudo -n ls -ld /var/www /var/www/hls-player /etc/nginx/sites-enabled 2>/dev/null || true
 
-  build-and-deploy:
-    needs: inspect-server
-    runs-on: ubuntu-latest
-    env:
-      NX_DAEMON: 'false'
-      NX_ISOLATE_PLUGINS: 'false'
-    steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
