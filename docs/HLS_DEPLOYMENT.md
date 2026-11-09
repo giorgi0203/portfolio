@@ -62,18 +62,20 @@ Direct SSH from this cloud environment was refused on port 22. Deployment instea
 uses the existing GitHub Actions secrets `DROPLET_HOST`, `DROPLET_USERNAME`,
 `DROPLET_SSH_KEY` and `DROPLET_SSH_PASSPHRASE`. A read-only workflow verified that
 those credentials connect to the intended droplet and that Nginx and Certbot are
-installed. The HLS workflow uses Node 24, runs tests/lint/build, uploads a separate
-static release, and invokes `deploy/install-hls-player.sh`. This script preserves
+installed. The HLS workflow downloads a prebuilt artifact from the separate `deploy/hls-player-artifacts` branch, verifies its
+pinned SHA-256 checksum, and invokes `deploy/install-hls-player.sh`. The artifact
+was built and tested with Node 24 in the cloud environment. Future source updates
+require a newly tested artifact and an updated artifact commit/checksum in the workflow. This script preserves
 the apex site, tests Nginx, switches the HLS release symlink, and provisions HTTPS
 through the existing Certbot account. Old releases remain for rollback. It
 preserves Certbot's TLS additions on subsequent runs.
 
 The workflow runs when the dedicated `codex/hls-player-subdomain` branch changes
-HLS/deployment files, and also supports manual dispatch once registered on the
+the deployment workflow, and also supports manual dispatch once registered on the
 default branch. Deployment does not depend on retrieving SSH secrets as plaintext.
 GitHub Actions log reads require `results-receiver.actions.githubusercontent.com`
 in the environment allowlist alongside `api.github.com`, `api.digitalocean.com`,
-`giorgi.app`, and `hls-player.giorgi.app`.
+`giorgi.app`, `hls-player.giorgi.app`.
 
 ## Local validation
 
@@ -89,3 +91,11 @@ not availability or CORS policy of external sample streams.
 The two unit tests cover rendered controls, native-HLS metadata loading state,
 and loading a new URL. The `serve-static` path now matches the actual build output.
 Existing unused welcome-component/style-budget build warnings remain.
+
+The deployed bundle is stored outside the source history on the artifact branch,
+with the workflow pointing at immutable commit
+`555488b449cc49dabc52a2752ac555754451d869`. SHA-256:
+`76d0dbe5bcb8fdca03aa7004134da779bf97fa0ab8a19f0e9503b7690f5c39a8`.
+GitHub release-asset upload was unavailable because the platform GitHub credential
+was not accepted by uploads.github.com; no additional credential is needed for
+the Git-backed artifact deployment.

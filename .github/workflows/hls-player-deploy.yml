@@ -4,9 +4,6 @@ on:
   push:
     branches: [codex/hls-player-subdomain]
     paths:
-      - 'apps/hls-player/**'
-      - 'deploy/nginx/hls-player.conf'
-      - 'deploy/install-hls-player.sh'
       - '.github/workflows/hls-player-deploy.yml'
   workflow_dispatch:
 
@@ -18,14 +15,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      NX_DAEMON: 'false'
-      NX_ISOLATE_PLUGINS: 'false'
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Inspect droplet using existing deployment credentials
+      # This is a prebuilt, browser-tested release. Future source updates need
+      # a new validated artifact, artifact commit and checksum before deployment.
+      - name: Install verified release on the droplet
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -34,46 +30,13 @@ jobs:
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           port: 22
           timeout: 30s
-          command_timeout: 2m
-          script: |
-            set -eu
-            ip -4 -o addr show | grep -q '138.68.64.163/'
-            whoami
-            sudo -n nginx -t
-            sudo -n nginx -T 2>/dev/null | sed -n '/server_name /p'
-            command -v certbot || true
-            sudo -n ls -ld /var/www /var/www/hls-player /etc/nginx/sites-enabled 2>/dev/null || true
-
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: npm
-      - run: npm ci --strict-ssl=true --no-audit --no-fund
-      - run: npx nx test hls-player --watch=false
-      - run: npx nx lint hls-player
-      - run: npx nx build hls-player --configuration=production
-      - name: Package static site
-        run: tar -czf hls-player.tar.gz -C dist/apps/hls-player .
-      - name: Upload isolated release and configuration
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: ${{ secrets.DROPLET_USERNAME }}
-          key: ${{ secrets.DROPLET_SSH_KEY }}
-          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          port: 22
-          source: hls-player.tar.gz,deploy/nginx/hls-player.conf,deploy/install-hls-player.sh
-          target: /tmp/giorgi-hls-${{ github.sha }}
-      - name: Install site and provision HTTPS
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: ${{ secrets.DROPLET_USERNAME }}
-          key: ${{ secrets.DROPLET_SSH_KEY }}
-          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          port: 22
           command_timeout: 5m
           script: |
             set -eu
-            sudo -n bash /tmp/giorgi-hls-${{ github.sha }}/deploy/install-hls-player.sh /tmp/giorgi-hls-${{ github.sha }} ${{ github.sha }}
+            ip -4 -o addr show | grep -q '138.68.64.163/'
+            stage=/tmp/giorgi-hls-${{ github.sha }}
+            mkdir -p "$stage"
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/555488b449cc49dabc52a2752ac555754451d869/hls-player-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '76d0dbe5bcb8fdca03aa7004134da779bf97fa0ab8a19f0e9503b7690f5c39a8' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n bash "$stage/deploy/install-hls-player.sh" "$stage" ${{ github.sha }}
