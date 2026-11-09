@@ -30,59 +30,11 @@ jobs:
             set -eu
             test -n "$SMART_TODO_AI_KEY"
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            stage=/tmp/smart-workspace-d35cb3fa1ba27a70e314eac7409239cd344acd82
+            stage=/tmp/smart-workspace-a3076a0b88c38167bf172b2f1059574a2e67f3aa
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/d35cb3fa1ba27a70e314eac7409239cd344acd82/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '52bd6aae8374f1fbf0da18caa50f10961de68d421ac1843eb71497bdb9fdb735' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/a3076a0b88c38167bf172b2f1059574a2e67f3aa/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'f83482f69bf3c787bfe7ea5935b31b20b13eff7a9284b8dbb74aa1d6afac7712' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-workspace.sh" "$stage" 4177f1d7adac7c160667df485bf88ddfb7df44df
+            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-workspace.sh" "$stage" 097a0803f514c955da9576e23ff212fbfa8fcd1e
             unset SMART_TODO_AI_KEY
-            sudo -n python3 - <<'PYSMOKE'
-            import json,urllib.request,urllib.error,uuid,time,sqlite3
-            base='https://smart-todolist.giorgi.app'
-            email='deployment-'+uuid.uuid4().hex+'@example.invalid'
-            password=uuid.uuid4().hex+'-health'
-            cookie=''
-            def call(path,method='GET',body=None):
-              global cookie
-              headers={'Origin':base,'Content-Type':'application/json'}
-              if cookie: headers['Cookie']=cookie
-              req=urllib.request.Request(base+path,method=method,headers=headers,data=None if body is None else json.dumps(body).encode())
-              try: response=urllib.request.urlopen(req,timeout=32)
-              except urllib.error.HTTPError as e: response=e
-              raw=response.read();data=json.loads(raw)
-              flags=response.headers.get('Set-Cookie','')
-              if flags: cookie=flags.split(';')[0]
-              return response.status,data,flags
-            try:
-              status,data,flags=call('/api/auth/register','POST',{'name':'Deployment check','email':email,'password':password})
-              assert status==201,status
-              assert all(x in flags.lower() for x in ['httponly','secure','samesite=lax'])
-              status,data,_=call('/api/projects','POST',{'name':'Deployment persistence check'})
-              assert status==201,status
-              project=data['project']['id']
-              status,data,_=call('/api/projects/'+project+'/tasks','POST',{'tasks':[{'title':'Prepare a small project launch checklist'}]})
-              assert status==201,status
-              task=data['tasks'][0]
-              before=time.monotonic()
-              status,data,_=call('/api/tasks/'+task['id']+'/assist','POST',{'action':'estimate'})
-              elapsed=round(time.monotonic()-before,1)
-              if status==200:
-                assert data['task']['estimatedMinutes']>0
-                print('Live OpenAI estimate passed in',elapsed,'seconds')
-              else:
-                assert status==503,(status,data.get('error'))
-                assert 'usage limit' in data.get('error','')
-                print('Live AI reports provider usage/billing limit clearly in',elapsed,'seconds')
-              status,_,_=call('/api/auth/logout','POST',{})
-              assert status==200
-              status,_,_=call('/api/auth/login','POST',{'email':email,'password':password})
-              assert status==200
-              status,data,_=call('/api/projects/'+project+'/tasks')
-              assert status==200 and data['tasks'][0]['id']==task['id']
-              print('Live HTTPS registration, secure session, saved project/tasks and re-login passed')
-            finally:
-              with sqlite3.connect('/var/lib/smart-todolist/workspace.sqlite') as db:
-                db.execute('PRAGMA foreign_keys=ON')
-                db.execute('DELETE FROM users WHERE email=?',(email,))
-            PYSMOKE
+            sudo -n python3 "$stage/deploy/verify-workspace.py"
