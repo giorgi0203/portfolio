@@ -84,7 +84,6 @@ export class App implements OnDestroy {
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
       video.src = this.videoUrl;
-      this.isLoading = false;
     } else {
       this.hasError = true;
       this.errorMessage = 'HLS is not supported in this browser';
@@ -126,6 +125,7 @@ export class App implements OnDestroy {
     
     video.addEventListener('loadedmetadata', () => {
       this.duration = video.duration;
+      this.isLoading = false;
     });
     
     video.addEventListener('timeupdate', () => {
