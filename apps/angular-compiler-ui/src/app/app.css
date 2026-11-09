@@ -1,0 +1,142 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.server-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+}
+
+.server-status.online .status-dot { background: #4caf50; }
+.server-status.offline .status-dot { background: #f44336; }
+.server-status.checking .status-dot { background: #ff9800; animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+}
+
+.examples {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.examples span {
+  color: #888;
+  font-size: 13px;
+}
+
+.examples button {
+  padding: 6px 12px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.examples button:hover {
+  background: #505050;
+  border-color: #666;
+}
+
+.compile-btn {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #dd0031, #c3002f);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.compile-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff1744, #dd0031);
+  transform: translateY(-1px);
+}
+
+.compile-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+.input-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #3c3c3c;
+  overflow: hidden;
+}
+
+.output-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  
+  .input-panel {
+    border-right: none;
+    border-bottom: 1px solid #3c3c3c;
+  }
+}

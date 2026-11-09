@@ -1,0 +1,53 @@
+<div class="app-container">
+  <!-- Header -->
+  <header class="header">
+    <h1>🅰️ Angular AOT Compiler</h1>
+    <div class="server-status" [class]="serverStatus()">
+      <span class="status-dot"></span>
+      <span>{{ serverStatus() === 'checking' ? 'Checking...' : serverStatus() === 'online' ? 'Server Online' : 'Server Offline' }}</span>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="examples">
+      <span>Examples:</span>
+      <button (click)="loadExample('counter')">Counter</button>
+      <button (click)="loadExample('list')">List</button>
+      <button (click)="loadExample('form')">Form</button>
+    </div>
+    <button class="compile-btn" (click)="compile()" [disabled]="isCompiling() || serverStatus() !== 'online'">
+      {{ isCompiling() ? '⏳ Compiling...' : '▶️ Compile' }}
+    </button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Input Panel -->
+    <div class="input-panel">
+      <app-code-editor
+        label="Component (TypeScript) - Complete Standalone Component"
+        language="typescript"
+        [value]="componentTs()"
+        (valueChange)="componentTs.set($event)"
+      />
+      <app-code-editor
+        label="Template (HTML) - Optional [External Template]"
+        language="html"
+        [value]="templateHtml()"
+        (valueChange)="templateHtml.set($event)"
+      />
+      <app-code-editor
+        label="Styles (CSS) - Optional [External Styles]"
+        language="css"
+        [value]="styleCss()"
+        (valueChange)="styleCss.set($event)"
+      />
+    </div>
+
+    <!-- Output Panel -->
+    <div class="output-panel">
+      <app-output-panel [result]="compilationResult()" [isCompiling]="isCompiling()" />
+    </div>
+  </div>
+</div>
