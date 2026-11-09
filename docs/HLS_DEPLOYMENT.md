@@ -94,8 +94,8 @@ Existing unused welcome-component/style-budget build warnings remain.
 
 The deployed bundle is stored outside the source history on the artifact branch,
 with the workflow pointing at immutable commit
-`555488b449cc49dabc52a2752ac555754451d869`. SHA-256:
-`76d0dbe5bcb8fdca03aa7004134da779bf97fa0ab8a19f0e9503b7690f5c39a8`.
+`a505d99f94c9b5f72ff397b45e665297847ed8d3`. SHA-256:
+`4546240f0bd387e95634157e2b2175c086420d713c0ff835ace847594ab5896e`.
 GitHub release-asset upload was unavailable because the platform GitHub credential
 was not accepted by uploads.github.com; no additional credential is needed for
 the Git-backed artifact deployment.

@@ -51,7 +51,8 @@ if [[ ! -L "$enabled" ]]; then
 fi
 if ! nginx -t; then rollback; exit 1; fi
 if ! systemctl reload nginx; then rollback; exit 1; fi
-if ! curl --fail --silent --show-error --max-time 10 -H 'Host: hls-player.giorgi.app' http://127.0.0.1/ -o /dev/null; then
+# Reload is asynchronous: retry until new workers serve this virtual host.
+if ! curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 1 --max-time 10 -H 'Host: hls-player.giorgi.app' -H 'Connection: close' http://127.0.0.1/ -o "$stage/http-check.html" || ! grep -q '<title>hls-player</title>' "$stage/http-check.html"; then
   rollback
   nginx -t && systemctl reload nginx
   exit 1
@@ -60,6 +61,6 @@ fi
 certbot --nginx --non-interactive --redirect -d hls-player.giorgi.app
 nginx -t
 systemctl reload nginx
-curl --fail --silent --show-error --max-time 20 https://hls-player.giorgi.app/ -o /dev/null
-curl --fail --silent --show-error --max-time 20 https://hls-player.giorgi.app/mf-manifest.json -o /dev/null
+curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 1 --max-time 20 https://hls-player.giorgi.app/ -o /dev/null
+curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 1 --max-time 20 https://hls-player.giorgi.app/mf-manifest.json -o /dev/null
 printf 'Deployed HLS Player release %s\n' "$release"
