@@ -34,9 +34,6 @@ jobs:
           script: |
             set -eu
             ip -4 -o addr show | grep -q '138.68.64.163/'
-            stage=/tmp/giorgi-hls-${{ github.sha }}
-            mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/555488b449cc49dabc52a2752ac555754451d869/hls-player-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '76d0dbe5bcb8fdca03aa7004134da779bf97fa0ab8a19f0e9503b7690f5c39a8' "$stage/bundle.tar.gz" | sha256sum --check --strict
-            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n bash "$stage/deploy/install-hls-player.sh" "$stage" ${{ github.sha }}
+            sudo -n nginx -T 2>/dev/null | sed -n '/^# configuration file /p;/include .*sites-enabled/p;/include .*conf.d/p'
+            sudo -n ls -l /etc/nginx/sites-enabled /etc/nginx/conf.d
+            sudo -n find /var/www/hls-player -maxdepth 2 -type d
