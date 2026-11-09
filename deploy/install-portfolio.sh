@@ -5,7 +5,8 @@ stage=${1:?staging directory required}
 release_id=${2:?commit SHA required}
 [[ "$release_id" =~ ^[0-9a-f]{40}$ ]]
 [[ "$stage" == "/tmp/giorgi-portfolio-$release_id" ]]
-ip -4 -o addr show | grep -q '138.68.64.163/'
+# Consume the full stream: grep -q can cause ip to receive SIGPIPE under pipefail.
+ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
 nginx -t
 site=$(readlink -f /etc/nginx/sites-enabled/portfolio)
 [[ "$site" == /etc/nginx/sites-available/portfolio ]]
