@@ -1,29 +1,71 @@
 import { TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { of } from 'rxjs';
-import { ApiService } from '../services/api.service';
 import { HomeComponent } from './home.component';
 
-describe('Portfolio deployed apps', () => {
+describe('Personal workshop', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HomeComponent],
-      providers: [
-        provideNoopAnimations(),
-        { provide: ApiService, useValue: { getSkills: () => of([]) } },
-      ],
     }).compileComponents();
   });
 
-  it('renders working subdomain links without a projects API', () => {
+  it('renders the portrait and working app links without an API', () => {
     const fixture = TestBed.createComponent(HomeComponent);
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
-    expect(page.querySelector('a[aria-label="Open HLS Player"]')?.getAttribute('href'))
-      .toBe('https://hls-player.giorgi.app/');
-    expect(page.querySelector('a[aria-label="Open Smart Todo List"]')?.getAttribute('href'))
-      .toBe('https://smart-todolist.giorgi.app/');
-    expect(page.querySelectorAll('#projects img').length).toBe(2);
-    expect(page.querySelector('a[href="/angular-playground"]')).toBeNull();
+    expect(
+      page
+        .querySelector('a[aria-label="Open HLS Player"]')
+        ?.getAttribute('href'),
+    ).toBe('https://hls-player.giorgi.app/');
+    expect(
+      page
+        .querySelector('a[aria-label="Open Smart Todo List"]')
+        ?.getAttribute('href'),
+    ).toBe('https://smart-todolist.giorgi.app/');
+    expect(page.querySelector('.hero-portrait')?.getAttribute('alt')).toContain(
+      'Giorgi',
+    );
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(2);
+  });
+
+  it('filters the drawer to useful apps', () => {
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const button = Array.from(page.querySelectorAll('.filters button')).find(
+      (item) => item.textContent?.includes('Useful-ish'),
+    );
+    button?.click();
+    fixture.detectChanges();
+    expect(
+      page.querySelector('[aria-label="Open Smart Todo List"]'),
+    ).not.toBeNull();
+    expect(page.querySelector('[aria-label="Open HLS Player"]')).toBeNull();
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(1);
+  });
+
+  it('offers another idea for a future project', () => {
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const before = page.querySelector('#next-idea')?.textContent;
+    page.querySelector<HTMLButtonElement>('.idea-button')?.click();
+    fixture.detectChanges();
+    expect(page.querySelector('#next-idea')?.textContent).not.toBe(before);
+  });
+
+  it('lets the cat approve the website', () => {
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    page
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="Ask the cat for a review"]',
+      )
+      ?.click();
+    fixture.detectChanges();
+    expect(page.querySelector('[role="status"]')?.textContent).toContain(
+      'looks shippable',
+    );
   });
 });

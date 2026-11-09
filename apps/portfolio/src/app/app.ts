@@ -1,34 +1,13 @@
-import { deployedApps } from './deployed-apps';
-import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { trigger, style, transition, animate } from '@angular/animations';
+import { deployedApps } from './deployed-apps';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterModule],
+  imports: [RouterModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
-  animations: [
-    trigger('fadeInUp', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(30px)' }),
-        animate('600ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
-      ])
-    ])
-  ]
 })
 export class App {
-  protected title = 'Giorgi Arabuli';
   readonly deployedApps = deployedApps;
-
-  // Animated background particles
-  particles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 1,
-    speed: Math.random() * 2 + 1
-  }));
-
 }

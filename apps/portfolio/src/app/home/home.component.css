@@ -1,1 +1,4 @@
-/* Empty - styles inherited from app.css */
+:host {
+  display: block;
+}
+/* Visual tokens and the page composition live in portfolio-theme.css. */

@@ -1,210 +1,318 @@
-<!-- Hero Section -->
-<section id="home" class="min-h-screen flex items-center justify-center text-center text-white relative">
-  <div class="flex flex-col items-center justify-center space-y-4">
-    <h1 class="text-6xl font-bold mb-4 text-shadow" [@slideInLeft]>{{ aboutMe.name }}</h1>
-    <h2 class="text-3xl font-light mb-8 opacity-90" [@slideInRight]>{{ aboutMe.title }}</h2>
-    <p class="text-xl max-w-2xl mx-auto mb-12 opacity-90 leading-relaxed" [@fadeInUp]>{{ aboutMe.description }}</p>
-    <div class="flex gap-4 justify-center flex-wrap" [@staggerAnimation]>
-      <button
-        class="px-8 py-4 border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-300 text-white bg-gradient-to-r from-primary-500 to-secondary-500 shadow-lg hover:-translate-y-0.5 hover:shadow-xl relative overflow-hidden btn-shine"
-        (click)="scrollToSection('projects')"
-      >
-        View My Work
-      </button>
-      <button
-        class="px-8 py-4 border-2 border-white rounded-full text-base font-semibold cursor-pointer transition-all duration-300 bg-transparent text-white hover:bg-white hover:text-primary-500 relative overflow-hidden btn-shine"
-        (click)="downloadResume()"
-      >
-        Download Resume
-      </button>
+<main id="main">
+  <section class="hero section-wrap" aria-labelledby="intro-title">
+    <div class="hero-doodles" aria-hidden="true">
+      <svg class="doodle code-doodle"><use href="#i-code" /></svg>
+      <svg class="doodle coffee-doodle"><use href="#i-coffee" /></svg>
+      <svg class="doodle cursor-doodle"><use href="#i-cursor" /></svg>
+      <span class="doodle tiny-plus">+</span>
+      <svg class="doodle star-doodle"><use href="#i-spark" /></svg>
     </div>
-  </div>
-</section>
-
-<!-- About Section -->
-<section id="about" class="py-20 bg-white/95 backdrop-blur-lg">
-  <div class="max-w-6xl mx-auto px-5">
-    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>About Me</h2>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-      <div [@slideInLeft]>
-        <p class="text-xl leading-relaxed mb-8">{{ aboutMe.description }}</p>
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center gap-4 text-lg">
-            <span class="text-2xl">📍</span>
-            <span>{{ aboutMe.location }}</span>
-          </div>
-          <div class="flex items-center gap-4 text-lg">
-            <span class="text-2xl">✉️</span>
-            <span>{{ aboutMe.email }}</span>
-          </div>
-        </div>
+    <div class="hero-copy">
+      <p class="eyebrow">
+        <span class="status-dot"></span> MY LITTLE CORNER OF THE INTERNET
+      </p>
+      <h1 id="intro-title">
+        Hi, I’m Giorgi.<br />I make
+        <span class="word-stuff"
+          >stuff<svg viewBox="0 0 290 20" aria-hidden="true">
+            <path d="M4 12Q132-3 283 10M20 18Q155 3 264 16" /></svg></span
+        ><span class="period">.</span>
+      </h1>
+      <p class="hero-aside">Sometimes useful. Always a little curious.</p>
+      <p class="hero-description">
+        Developer, serial tinkerer, and occasional finisher of side projects.
+        Welcome to my collection of tools, experiments, and things nobody asked
+        for.
+      </p>
+      <div class="hero-actions">
+        <a href="#projects" class="button button-dark"
+          >Open the junk drawer
+          <svg class="icon" aria-hidden="true"><use href="#i-arrow" /></svg
+        ></a>
+        <a
+          href="https://github.com/giorgi0203"
+          class="text-link"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Peek at the code
+          <svg class="icon" aria-hidden="true"><use href="#i-up-right" /></svg
+        ></a>
       </div>
-      <div class="flex justify-center" [@slideInRight]>
-        <div class="w-80 h-80 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl font-semibold shadow-2xl">
-          <span>Your Photo</span>
-        </div>
+      <div class="hero-footnote">
+        <span class="hand-drawn-arrow" aria-hidden="true">↳</span> Small ideas.
+        Real apps. Questionable sleep schedule.
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Skills Section -->
-<section id="skills" class="py-20 bg-white/95 backdrop-blur-lg">
-  <div class="max-w-6xl mx-auto px-5">
-    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Skills & Technologies</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" [@staggerAnimation]>
-      @for (skill of skills; track skill.id) {
-        <div
-          class="bg-white p-8 rounded-3xl shadow-xl transition-transform duration-300 hover:-translate-y-2 text-center skill-card-hover"
-        >
-          <div class="text-5xl mb-4">{{ skill.icon }}</div>
-          <h3 class="text-2xl mb-4 text-gray-800">{{ skill.name }}</h3>
-          <div class="bg-gray-200 rounded-lg h-2 mb-4 overflow-hidden">
-            <div class="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg transition-all duration-1000 ease-out progress-bar" [style.width.%]="skill.level"></div>
-          </div>
-          <span class="font-semibold text-primary-500">{{ skill.level }}%</span>
+    <div class="portrait-scene">
+      <div class="portrait-blob" aria-hidden="true"></div>
+      <div class="portrait-label">
+        <span class="status-dot"></span> THE HUMAN BEHIND THE TABS
+      </div>
+      <img
+        class="hero-portrait"
+        src="/assets/giorgi-and-cat.webp"
+        alt="An illustrated caricature of Giorgi holding his curious white and gray cat"
+        width="1254"
+        height="1254"
+        fetchpriority="high"
+      />
+      <svg class="portrait-spark" aria-hidden="true">
+        <use href="#i-spark" />
+      </svg>
+      <span class="human-stamp" aria-hidden="true"
+        >100%<br /><small>human-ish</small></span
+      >
+      <button
+        class="cat-label"
+        type="button"
+        [attr.aria-pressed]="catApproved"
+        (click)="catApproved = !catApproved"
+        aria-label="Ask the cat for a review"
+      >
+        <span class="cat-label-arrow" aria-hidden="true">↖</span
+        ><span>Chief Distraction<br />Officer</span
+        ><span class="paw" aria-hidden="true">✧</span>
+      </button>
+      @if (catApproved) {
+        <div class="cat-verdict" role="status">
+          mrrp. looks shippable. <span aria-hidden="true">✓</span>
         </div>
       }
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- Projects Section (Showroom) -->
-<section id="projects" class="py-20 bg-white/98 backdrop-blur-lg">
-  <div class="max-w-6xl mx-auto px-5">
-    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Featured Projects</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" [@staggerAnimation]>
-      @for (project of projects; track project.id) {
-        <div
-          class="bg-white rounded-3xl overflow-hidden shadow-xl transition-transform duration-300 hover:-translate-y-2 relative project-shine"
+  <div class="ticker" aria-hidden="true">
+    <div>
+      MADE OUT OF CURIOSITY <span>✳</span> SHIPPED WITH OPTIMISM
+      <span>✳</span> OCCASIONALLY USEFUL <span>✳</span> CAT SUPERVISED
+      <span>✳</span> MADE OUT OF CURIOSITY <span>✳</span> SHIPPED WITH OPTIMISM
+      <span>✳</span>
+    </div>
+  </div>
+
+  <section
+    id="projects"
+    class="projects-section section-wrap"
+    aria-labelledby="projects-title"
+  >
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">01 / BUILT IT. PUT IT ON THE INTERNET.</p>
+        <h2 id="projects-title">
+          The junk drawer<span class="serif-dot">.</span>
+        </h2>
+      </div>
+      <p>
+        Some tools. Some toys.<br />
+        All made by me, mostly for the fun of it.
+      </p>
+    </div>
+    <div class="project-toolbar">
+      <div class="filters" role="group" aria-label="Filter apps">
+        @for (filter of filters; track filter.value) {
+          <button
+            type="button"
+            [class.selected]="activeFilter === filter.value"
+            [attr.aria-pressed]="activeFilter === filter.value"
+            (click)="activeFilter = filter.value"
+          >
+            {{ filter.label }}
+            @if (filter.value === 'all') {
+              <span>{{ projects.length }}</span>
+            }
+          </button>
+        }
+      </div>
+      <span class="tiny-note"
+        ><span class="status-dot"></span> All apps are live. Go break
+        something.</span
+      >
+    </div>
+    <div class="project-grid">
+      @for (project of visibleProjects; track project.id) {
+        <article
+          class="project-card"
+          [class.video-card]="project.category === 'play'"
+          [class.todo-card]="project.category === 'useful'"
+          data-app-card
         >
-          <div class="relative overflow-hidden">
-            <img [src]="project.imageUrl" [alt]="project.title" class="w-full h-64 object-cover transition-transform duration-300" />
-            <div class="absolute inset-0 bg-primary-500/90 flex items-center justify-center opacity-0 transition-opacity duration-300 hover:opacity-100">
-              <div class="flex gap-4">
-                <a
-                  [href]="project.liveUrl"
-                  class="px-4 py-2 text-sm bg-white text-primary-500 rounded-full transition-all duration-300 hover:bg-primary-100"
-                  target="_blank" rel="noopener noreferrer"
-                >
-                  Live Demo
-                </a>
-                <a
-                  [href]="project.githubUrl"
-                  class="px-4 py-2 text-sm bg-transparent text-white border-2 border-white rounded-full transition-all duration-300 hover:bg-white hover:text-primary-500"
-                  target="_blank" rel="noopener noreferrer"
-                >
-                  View Code
-                </a>
+          <a
+            class="project-preview"
+            [href]="project.liveUrl"
+            [attr.aria-label]="'Preview ' + project.title"
+          >
+            @if (project.category === 'play') {
+              <div class="mini-player" aria-hidden="true">
+                <div class="mini-window-top">
+                  <span></span><span></span><span></span
+                  ><b>just one more video</b>
+                </div>
+                <div class="video-canvas">
+                  <span class="video-orbit orbit-one"></span
+                  ><span class="video-orbit orbit-two"></span
+                  ><span class="play-button"
+                    ><svg class="icon"><use href="#i-play" /></svg></span
+                  ><span class="video-caption"
+                    >press play. get distracted.</span
+                  >
+                </div>
+                <div class="video-timeline">
+                  <span></span><b>00:42</b
+                  ><svg class="icon"><use href="#i-spark" /></svg>
+                </div>
               </div>
+              <span class="preview-sticker" aria-hidden="true"
+                >▶ GOOD DISTRACTION</span
+              >
+            } @else {
+              <div class="mini-todo" aria-hidden="true">
+                <div class="todo-window-top">
+                  <span>today, probably.</span><span>↗</span>
+                </div>
+                <div class="mock-task checked">
+                  <span
+                    ><svg class="icon"><use href="#i-check" /></svg></span
+                  ><b>overthink it</b>
+                </div>
+                <div class="mock-task">
+                  <span></span><b>ship something weird</b><i>✦</i>
+                </div>
+                <div class="mock-task">
+                  <span></span><b>remember the other task</b>
+                </div>
+                <div class="todo-progress"><span></span></div>
+                <small>one thing at a time, human.</small>
+              </div>
+              <span class="preview-sticker" aria-hidden="true"
+                >✓ USEFUL-ISH</span
+              >
+            }
+          </a>
+          <div class="project-body">
+            <div class="project-meta">
+              <span>{{ project.label }}</span
+              ><span class="live-label"
+                ><span class="status-dot"></span>Live</span
+              >
             </div>
-          </div>
-          <div class="p-8">
-            <h3 class="text-2xl mb-4 text-gray-800">{{ project.title }}</h3>
-            <p class="mb-6 text-gray-600 leading-relaxed">{{ project.description }}</p>
-            <a [href]="project.liveUrl" class="inline-block mb-6 font-semibold text-primary-500 hover:underline" [attr.aria-label]="'Open ' + project.title">Open app →</a>
-            <div class="flex flex-wrap gap-2">
+            <h3>{{ project.title }}</h3>
+            <p>{{ project.description }}</p>
+            <div class="tech-tags">
               @for (tech of project.technologies; track tech) {
-                <span class="bg-gray-100 px-3 py-1 rounded-full text-xs text-primary-500 font-medium">{{ tech }}</span>
+                <span>{{ tech }}</span>
               }
             </div>
+            <div class="project-links">
+              <a
+                [href]="project.liveUrl"
+                [attr.aria-label]="'Open ' + project.title"
+                >Give it a spin
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-up-right" /></svg></a
+              ><a
+                class="source-link"
+                [href]="project.githubUrl"
+                [attr.aria-label]="'View source for ' + project.title"
+                target="_blank"
+                rel="noopener noreferrer"
+                ><svg class="icon" aria-hidden="true">
+                  <use href="#i-github" /></svg
+              ></a>
+            </div>
           </div>
-        </div>
+        </article>
+      }
+      @if (activeFilter === 'all') {
+        <article class="future-card">
+          <span class="coming-label">CURRENTLY INCUBATING</span>
+          <div class="future-symbol" aria-hidden="true">
+            <svg><use href="#i-plus" /></svg><span>?</span>
+          </div>
+          <h3>Something with<br />a business model.</h3>
+          <p id="next-idea" aria-live="polite">{{ currentIdea }}</p>
+          <span class="future-aside"
+            >Eventually, something has to pay<br />for the cat food.</span
+          ><button
+            type="button"
+            class="idea-button"
+            (click)="nextIdea()"
+            aria-describedby="next-idea"
+          >
+            Another questionable idea
+            <svg class="icon" aria-hidden="true"><use href="#i-refresh" /></svg>
+          </button>
+        </article>
       }
     </div>
-  </div>
-</section>
+    <p class="drawer-footnote">
+      <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg> This
+      drawer is never really finished. That’s kind of the point.
+    </p>
+  </section>
 
-<!-- Contact Section -->
-<section id="contact" class="py-20 bg-white/95 backdrop-blur-lg">
-  <div class="max-w-6xl mx-auto px-5">
-    <h2 class="text-5xl font-bold text-center mb-12 text-gray-800" [@fadeInUp]>Get In Touch</h2>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start" [@staggerAnimation]>
-      <div>
-        <h3 class="text-3xl mb-4 text-gray-800">Let's work together!</h3>
-        <p class="text-xl mb-8 text-gray-600">I'm always open to discussing new opportunities and interesting projects.</p>
-        <div class="flex flex-col gap-4">
-          <a
-            [href]="'mailto:' + aboutMe.email"
-            class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500"
-          >
-            <span class="text-2xl">✉️</span>
-            <span>{{ aboutMe.email }}</span>
-          </a>
-          <a
-            [href]="aboutMe.github"
-            class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500"
-            target="_blank" rel="noopener noreferrer"
-          >
-            <span class="text-2xl">🐙</span>
-            <span>GitHub</span>
-          </a>
-          <a
-            [href]="aboutMe.linkedin"
-            class="flex items-center gap-4 no-underline text-gray-800 text-lg transition-colors duration-300 hover:text-primary-500"
-            target="_blank" rel="noopener noreferrer"
-          >
-            <span class="text-2xl">💼</span>
-            <span>LinkedIn</span>
-          </a>
+  <section id="about" class="about-section" aria-labelledby="about-title">
+    <div class="section-wrap about-layout">
+      <div class="about-copy">
+        <p class="eyebrow">02 / A BIT ABOUT THE HUMAN</p>
+        <h2 id="about-title">
+          Curiosity first.<br />Instructions <em>later.</em>
+        </h2>
+        <p>
+          I’m Giorgi, a full-stack developer who likes turning “what if…” into
+          something you can actually click.
+        </p>
+        <p>
+          This is my personal internet workshop. A place to try things, follow
+          rabbit holes, and occasionally build something worth keeping. Serious
+          projects are welcome. Taking myself too seriously is not.
+        </p>
+        <div class="toolbox">
+          <span>USUALLY REACHING FOR</span>
+          <div>
+            <b>Angular</b><b>TypeScript</b><b>Node.js</b
+            ><b>too many browser tabs</b>
+          </div>
         </div>
       </div>
-      <div class="bg-white p-8 rounded-3xl shadow-xl">
-        <form [formGroup]="contactForm" (ngSubmit)="onSubmitContact()">
-          <div class="mb-6">
-            <input
-              type="text"
-              formControlName="name"
-              placeholder="Your Name"
-              required
-              class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg"
-            />
-          </div>
-          <div class="mb-6">
-            <input
-              type="email"
-              formControlName="email"
-              placeholder="Your Email"
-              required
-              class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg"
-            />
-          </div>
-          <div class="mb-6">
-            <input
-              type="text"
-              formControlName="subject"
-              placeholder="Subject"
-              class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg"
-            />
-          </div>
-          <div class="mb-6">
-            <textarea
-              formControlName="message"
-              placeholder="Your Message"
-              rows="5"
-              required
-              class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all duration-300 focus:outline-none focus:border-primary-500 focus:scale-105 focus:shadow-lg resize-none"
-            ></textarea>
-          </div>
-          <button
-            type="submit"
-            [disabled]="contactSubmitting || contactForm.invalid"
-            class="px-8 py-4 border-0 rounded-full text-base font-semibold cursor-pointer transition-all duration-300 text-white bg-gradient-to-r from-primary-500 to-secondary-500 shadow-lg hover:-translate-y-0.5 hover:shadow-xl relative overflow-hidden btn-shine w-full disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {{ contactSubmitting ? 'Sending...' : 'Send Message' }}
-          </button>
-          @if (contactMessage) {
-            <p class="mt-4 text-center">{{ contactMessage }}</p>
-          }
-        </form>
-      </div>
+      <aside class="process-note">
+        <div class="note-pin" aria-hidden="true"></div>
+        <span class="eyebrow">A VERY SERIOUS PROCESS</span>
+        <ol>
+          <li>Have a slightly weird idea.</li>
+          <li>Open the editor.</li>
+          <li>Cat sits on keyboard.</li>
+          <li>Ship it anyway.</li>
+        </ol>
+        <div class="note-scribble">
+          repeat until something sticks <span aria-hidden="true">↻</span>
+        </div>
+        <svg class="note-spark" aria-hidden="true"><use href="#i-spark" /></svg>
+      </aside>
     </div>
-  </div>
-</section>
-
-<!-- Footer -->
-<footer class="bg-white/95 backdrop-blur-lg py-8 text-center text-gray-600">
-  <div class="max-w-6xl mx-auto px-5">
-    <p>&copy; 2025 {{ aboutMe.name }}. All rights reserved.</p>
+  </section>
+</main>
+<footer id="contact" class="site-footer">
+  <div class="section-wrap">
+    <div class="footer-top">
+      <div>
+        <p class="eyebrow">GOOD THINGS START WITH A “WHAT IF”</p>
+        <h2>Got a weird idea?<br /><em>I like those.</em></h2>
+      </div>
+      <a
+        href="https://github.com/giorgi0203"
+        class="button button-lime"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Find me on GitHub
+        <svg class="icon" aria-hidden="true"><use href="#i-up-right" /></svg
+      ></a>
+    </div>
+    <div class="footer-bottom">
+      <a href="#main" class="footer-brand"
+        >giorgi.app<span>© {{ year }} Giorgi Arabuli</span></a
+      >
+      <p>Made by a human. Supervised by a cat.</p>
+      <a href="#main" class="back-top">Back to top ↑</a>
+    </div>
   </div>
 </footer>

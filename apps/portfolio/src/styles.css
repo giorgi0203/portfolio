@@ -1,236 +1,86 @@
 @import 'tailwindcss';
-
+@import './portfolio-theme.css';
 @source "./**/*.{html,ts}";
 @source "../../../libs/**/*.{html,ts}";
 
-@theme {
-  /* Beautiful Gradient Colors */
-  --color-primary-50: #f0fdff;
-  --color-primary-100: #ccfbf1;
-  --color-primary-200: #99f6e4;
-  --color-primary-300: #5fd3c4;
-  --color-primary-400: #5eb2c2;
-  --color-primary-500: #50c6c4;
-  --color-primary-600: #0891b2;
-  --color-primary-700: #0e7490;
-  --color-primary-800: #155e75;
-  --color-primary-900: #164e63;
-
-  --color-secondary-50: #f7ffe0;
-  --color-secondary-100: #ecfccb;
-  --color-secondary-200: #d9f99d;
-  --color-secondary-300: #bcf287;
-  --color-secondary-400: #87e7a1;
-  --color-secondary-500: #5ed8b8;
-  --color-secondary-600: #16a34a;
-  --color-secondary-700: #15803d;
-  --color-secondary-800: #166534;
-  --color-secondary-900: #14532d;
-
-  /* Accent colors */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #f9f871;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-  --color-accent-800: #92400e;
-  --color-accent-900: #78350f;
-
-  /* Font families */
-  --font-family-sans: 'Inter', 'system-ui', '-apple-system',
-    'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif';
-
-  /* Animations */
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-gradient-shift: gradientShift 3s ease infinite;
-  --animate-pulse-slow: pulse 3s ease-in-out infinite;
-  --animate-bounce-slow: bounce 2s infinite;
-  --animate-typing: typing 3s steps(40, end),
-    blink-caret 0.75s step-end infinite;
-  --animate-shine: shine 2s ease-in-out infinite;
-  --animate-fade-in-up: fadeInUp 0.6s ease-out;
-  --animate-slide-in-left: slideInLeft 0.8s ease-out;
-  --animate-slide-in-right: slideInRight 0.8s ease-out;
-
-  /* Background images */
-  --bg-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --bg-gradient-button: linear-gradient(45deg, #667eea, #764ba2);
-  --bg-gradient-hover: linear-gradient(45deg, #f093fb, #f5576c, #4facfe);
-  --bg-gradient-shine: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-
-  /* Backdrop blur */
-  --backdrop-blur-xs: 2px;
-  --backdrop-blur-sm: 4px;
-  --backdrop-blur-md: 8px;
-  --backdrop-blur-lg: 16px;
-  --backdrop-blur-xl: 24px;
-  --backdrop-blur-2xl: 40px;
-  --backdrop-blur-3xl: 64px;
-
-  /* Box shadows */
-  --shadow-glass: 0 10px 30px rgba(0, 0, 0, 0.1);
-  --shadow-glass-lg: 0 20px 60px rgba(0, 0, 0, 0.1);
-  --shadow-primary: 0 4px 15px rgba(102, 126, 234, 0.4);
-  --shadow-primary-lg: 0 6px 20px rgba(102, 126, 234, 0.6);
-  --shadow-glow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-
-  /* Text shadows */
-  --text-shadow-sm: 1px 1px 2px rgba(0, 0, 0, 0.1);
-  --text-shadow-DEFAULT: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  --text-shadow-lg: 4px 4px 8px rgba(0, 0, 0, 0.5);
+:root {
+  --paper: #f8f6ef;
+  --ink: #252721;
+  --muted: #73736a;
+  --lime: #d6f38c;
+  --purple: #e9e1f7;
+  --orange: #eb946d;
+  --line: #deded3;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-sans: 'Arial', 'Helvetica Neue', sans-serif;
+  color-scheme: light;
 }
-
-/* Keyframes */
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px) rotate(0deg);
-    opacity: 0.8;
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 110px;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+}
+a,
+button {
+  touch-action: manipulation;
+}
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #7d58b8;
+  outline-offset: 5px;
+}
+::selection {
+  background: var(--lime);
+  color: var(--ink);
+}
+.icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+svg use {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+img {
+  max-width: 100%;
+}
+button {
+  color: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  50% {
-    transform: translateY(-20px) rotate(180deg);
-    opacity: 0.3;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
-}
-
-@keyframes blink-caret {
-  from,
-  to {
-    border-color: transparent;
-  }
-  50% {
-    border-color: currentColor;
-  }
-}
-
-@keyframes shine {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-@keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInLeft {
-  0% {
-    opacity: 0;
-    transform: translateX(-50px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInRight {
-  0% {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Utilities */
-@utility text-shadow-sm {
-  text-shadow: var(--text-shadow-sm);
-}
-
-@utility text-shadow {
-  text-shadow: var(--text-shadow-DEFAULT);
-}
-
-@utility text-shadow-lg {
-  text-shadow: var(--text-shadow-lg);
-}
-
-@utility text-shadow-none {
-  text-shadow: none;
-}
-
-@utility bg-gradient-primary {
-  background-image: var(--bg-gradient-primary);
-}
-
-@utility bg-gradient-button {
-  background-image: var(--bg-gradient-button);
-}
-
-@utility bg-gradient-hover {
-  background-image: var(--bg-gradient-hover);
-}
-
-@utility bg-gradient-shine {
-  background-image: var(--bg-gradient-shine);
-}
-
-@utility backdrop-blur-xs {
-  backdrop-filter: blur(var(--backdrop-blur-xs));
-}
-
-@utility backdrop-blur-3xl {
-  backdrop-filter: blur(var(--backdrop-blur-3xl));
-}
-
-@utility shadow-glass {
-  box-shadow: var(--shadow-glass);
-}
-
-@utility shadow-glass-lg {
-  box-shadow: var(--shadow-glass-lg);
-}
-
-@utility shadow-primary {
-  box-shadow: var(--shadow-primary);
-}
-
-@utility shadow-primary-lg {
-  box-shadow: var(--shadow-primary-lg);
-}
-
-@utility shadow-glow {
-  box-shadow: var(--shadow-glow);
 }

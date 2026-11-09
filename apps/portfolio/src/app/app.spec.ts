@@ -15,20 +15,25 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const link = fixture.nativeElement.querySelector('nav a');
-    expect(link.textContent.trim()).toBe('Giorgi Arabuli');
+    expect(link.getAttribute('aria-label')).toBe('Giorgi Arabuli — home');
+    expect(link.textContent).toContain('giorgi.app');
     expect(link.getAttribute('href')).toBe('/');
   });
 
   it('links directly to the deployed HLS player', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    const link = fixture.nativeElement.querySelector('a[href="https://hls-player.giorgi.app/"]');
+    const link = fixture.nativeElement.querySelector(
+      'a[href="https://hls-player.giorgi.app/"]',
+    );
     expect(link?.textContent.trim()).toBe('HLS Player');
   });
   it('links directly to the deployed todo list', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    const link = fixture.nativeElement.querySelector('a[href="https://smart-todolist.giorgi.app/"]');
+    const link = fixture.nativeElement.querySelector(
+      'a[href="https://smart-todolist.giorgi.app/"]',
+    );
     expect(link?.textContent.trim()).toBe('Smart Todo List');
   });
 });

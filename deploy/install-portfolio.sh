@@ -14,7 +14,7 @@ release="$target/releases/$release_id-$(date -u +%Y%m%dT%H%M%S)-$$"
 install -d -m 755 "$release/browser"
 install -d -m 700 "$target/backups"
 tar -xzf "$stage/portfolio.tar.gz" -C "$release/browser" --no-same-owner
-[[ -s "$release/browser/index.html" && -s "$release/browser/assets/hls-player.svg" && -s "$release/browser/assets/smart-todolist.svg" ]]
+[[ -s "$release/browser/index.html" && -s "$release/browser/assets/giorgi-and-cat.webp" ]]
 chmod -R a+rX "$release"
 backup="$target/backups/$release_id-$$.conf"
 cp -p "$site" "$backup"
