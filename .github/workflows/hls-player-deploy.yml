@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/hls-player/**'
       - 'deploy/nginx/hls-player.conf'
+      - 'deploy/install-hls-player.sh'
       - '.github/workflows/hls-player-deploy.yml'
   workflow_dispatch:
 
@@ -38,3 +39,44 @@ jobs:
             sudo -n nginx -T 2>/dev/null | sed -n '/server_name /p'
             command -v certbot || true
             sudo -n ls -ld /var/www /var/www/hls-player /etc/nginx/sites-enabled 2>/dev/null || true
+
+  build-and-deploy:
+    needs: inspect-server
+    runs-on: ubuntu-latest
+    env:
+      NX_DAEMON: 'false'
+      NX_ISOLATE_PLUGINS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --strict-ssl=true --no-audit --no-fund
+      - run: npx nx test hls-player --watch=false
+      - run: npx nx lint hls-player
+      - run: npx nx build hls-player --configuration=production
+      - name: Package static site
+        run: tar -czf hls-player.tar.gz -C dist/apps/hls-player .
+      - name: Upload isolated release and configuration
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          source: hls-player.tar.gz,deploy/nginx/hls-player.conf,deploy/install-hls-player.sh
+          target: /tmp/giorgi-hls-${{ github.sha }}
+      - name: Install site and provision HTTPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            set -eu
+            sudo -n bash /tmp/giorgi-hls-${{ github.sha }}/deploy/install-hls-player.sh /tmp/giorgi-hls-${{ github.sha }} ${{ github.sha }}
