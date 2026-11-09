@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -21,6 +24,7 @@ jobs:
           script: |
             set -eu
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            test "$(basename "$(readlink -f /var/www/smart-todolist-workspace/current)")" = "097a0803f514c955da9576e23ff212fbfa8fcd1e"
             script=/tmp/verify-workspace-097a0803f514c955da9576e23ff212fbfa8fcd1e.py
             curl -fsS --max-time 30 https://raw.githubusercontent.com/giorgi0203/smart-todolist/097a0803f514c955da9576e23ff212fbfa8fcd1e/deploy/verify-workspace.py -o "$script"
             printf '%s  %s\n' '5340d57818447943476aae1a60c7dbf4e839db253fd1b76e2aa5de216a6be60b' "$script" | sha256sum --check --strict
