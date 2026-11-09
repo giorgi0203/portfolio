@@ -41,9 +41,7 @@ export interface ContactResponse {
 })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = environment.production 
-    ? 'https://giorgi.app/api' 
-    : 'http://localhost:3000/api';
+  private readonly apiUrl = environment.apiUrl;
 
   // Health check
   getHealth(): Observable<{ status: string; timestamp: string }> {

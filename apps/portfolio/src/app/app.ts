@@ -1,5 +1,6 @@
+import { deployedApps } from './deployed-apps';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { trigger, style, transition, animate } from '@angular/animations';
 
@@ -17,8 +18,9 @@ import { trigger, style, transition, animate } from '@angular/animations';
     ])
   ]
 })
-export class App implements OnInit {
+export class App {
   protected title = 'Giorgi Arabuli';
+  readonly deployedApps = deployedApps;
 
   // Animated background particles
   particles = Array.from({ length: 50 }, (_, i) => ({
@@ -29,7 +31,4 @@ export class App implements OnInit {
     speed: Math.random() * 2 + 1
   }));
 
-  ngOnInit() {
-    // Shell initialization if needed
-  }
 }

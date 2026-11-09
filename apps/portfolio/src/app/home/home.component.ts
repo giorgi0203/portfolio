@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trigger, style, transition, animate, stagger, query } from '@angular/animations';
-import { ApiService, Project, Skill, ContactFormData } from '../services/api.service';
+import { ApiService, Skill, ContactFormData } from '../services/api.service';
+import { deployedApps } from '../deployed-apps';
 
 @Component({
   selector: 'app-home',
@@ -42,7 +43,7 @@ import { ApiService, Project, Skill, ContactFormData } from '../services/api.ser
   ]
 })
 export class HomeComponent implements OnInit {
-  projects: Project[] = [];
+  projects = deployedApps;
   skills: Skill[] = [];
   private apiService = inject(ApiService);
   private fb = inject(FormBuilder);
@@ -72,45 +73,7 @@ export class HomeComponent implements OnInit {
   };
 
   ngOnInit() {
-    this.loadProjects();
     this.loadSkills();
-  }
-
-  loadProjects() {
-    this.apiService.getProjects().subscribe({
-      next: (projects) => {
-        this.projects = projects;
-      },
-      error: (error) => {
-        console.error('Error loading projects:', error);
-        this.projects = [
-          {
-            id: 1,
-            title: "Angular Playground",
-            description: "Interactive Angular code playground with live preview, Monaco Editor, and JIT compilation",
-            technologies: ["Angular", "Monaco Editor", "Module Federation", "TypeScript", "Tailwind CSS"],
-            githubUrl: "https://github.com/giorgi0203/portfolio",
-            liveUrl: "/angular-playground",
-            imageUrl: "/assets/angular-playground-preview.jpg",
-            image: "/assets/angular-playground-preview.jpg",
-            demoUrl: "/angular-playground",
-            codeUrl: "https://github.com/giorgi0203/portfolio"
-          },
-          {
-            id: 2,
-            title: "HLS Player",
-            description: "A modern, responsive HLS video player built with Angular",
-            technologies: ["Angular", "HLS.js", "TypeScript", "Module Federation"],
-            githubUrl: "https://github.com/giorgi0203/portfolio",
-            liveUrl: "/hls-player",
-            imageUrl: "/assets/hls-player-preview.jpg",
-            image: "/assets/hls-player-preview.jpg",
-            demoUrl: "/hls-player",
-            codeUrl: "https://github.com/giorgi0203/portfolio"
-          }
-        ];
-      }
-    });
   }
 
   loadSkills() {
