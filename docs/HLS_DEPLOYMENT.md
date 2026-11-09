@@ -99,3 +99,19 @@ with the workflow pointing at immutable commit
 GitHub release-asset upload was unavailable because the platform GitHub credential
 was not accepted by uploads.github.com; no additional credential is needed for
 the Git-backed artifact deployment.
+
+## Deployment verification
+
+Deployed successfully to https://hls-player.giorgi.app/ using Actions run
+https://github.com/giorgi0203/portfolio/actions/runs/42674983092.
+Certbot installed HTTPS and scheduled renewal. Public HTTPS requests returned
+200 for the page, federation manifest and JavaScript entry. The apex site's HTML
+hash matched its value before deployment.
+
+The public production assets also passed Chromium rendering and video playback
+checks with a generated local HLS stream. This cloud's Chromium profile lacks
+trust for the current environment proxy CA, so those deployed assets were fetched
+through curl with normal TLS verification and relayed into the browser. No
+certificate verification was disabled, and no persistent browser trust changes
+were made. External sample-stream availability was not part of this deterministic
+playback check.
