@@ -30,11 +30,11 @@ jobs:
             print('Existing AI token configured:',bool(token))
             if token:
               endpoint='https://models.github.ai/inference/chat/completions'
-              req=urllib.request.Request(endpoint,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json','X-GitHub-Api-Version':'2022-11-28'},data=json.dumps({'model':'openai/gpt-4.1-mini','messages':[{'role':'system','content':'Return only JSON with description (a short sentence), estimatedMinutes (integer), and subtasks (2 objects with title fields). Plan the supplied task.'},{'role':'user','content':'Prepare a landing page'}],'response_format':{'type':'json_object'},'max_tokens':300}).encode())
+              req=urllib.request.Request(endpoint,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json','X-GitHub-Api-Version':'2022-11-28'},data=json.dumps({'model':'openai/gpt-4.1-mini','messages':[{'role':'system','content':'Return only JSON with description (a short sentence), estimatedMinutes (integer), and subtasks (2 objects with title fields). Plan the supplied task.'},{'role':'user','content':'Prepare a landing page'}],'response_format':{'type':'json_object'},'stream':False,'max_tokens':300}).encode())
               start=time.monotonic()
               try:
                 with urllib.request.urlopen(req,timeout=25) as r:
-                  raw=r.read();data=json.loads(raw);content=data.get('choices',[{}])[0].get('message',{}).get('content');result=json.loads(content) if content else data;print('Structured AI HTTP',r.status,'seconds',round(time.monotonic()-start,2),'content_type',r.headers.get('Content-Type'),'fields',list(result.keys()),'estimate',isinstance(result.get('estimatedMinutes'),int),'subtasks',len(result.get('subtasks',[])))
+                  raw=r.read();safe=raw.decode('utf8','replace').replace(token,'[redacted]');print('Provider metadata',r.status,r.headers.get('Content-Type'),'bytes',len(raw),'sample',safe[:250]);data=json.loads(raw);content=data.get('choices',[{}])[0].get('message',{}).get('content');result=json.loads(content) if content else data;print('Structured AI HTTP',r.status,'seconds',round(time.monotonic()-start,2),'content_type',r.headers.get('Content-Type'),'fields',list(result.keys()),'estimate',isinstance(result.get('estimatedMinutes'),int),'subtasks',len(result.get('subtasks',[])))
               except urllib.error.HTTPError as e:print('Structured AI HTTP',e.code)
               except Exception as e:print('Structured AI',type(e).__name__,'seconds',round(time.monotonic()-start,2))
             PY
