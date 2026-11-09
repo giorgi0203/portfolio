@@ -6,39 +6,44 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.0.0
+        env:
+          SMART_TODO_AI_KEY: ${{ secrets.SMART_TODO_AI_KEY }}
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: SMART_TODO_AI_KEY
           command_timeout: 2m
           script: |
             set -eu
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            node --version
-            systemctl is-active smart-todolist-web smart-todolist-agent
-            systemctl show smart-todolist-web -p User -p WorkingDirectory -p ExecStart
+            systemctl show smart-todolist-web -p User -p WorkingDirectory -p ExecStart -p DropInPaths
             python3 - <<'PY'
-            import json,pathlib,urllib.request,urllib.error,time
-            p=pathlib.Path('/var/www/smart-todolist/current/agent/appsettings.Production.json')
-            cfg=json.loads(p.read_text());token=cfg.get('GitHubToken','')
-            print('Existing AI token configured:',bool(token))
-            if token:
-              import socket
-              print('Models DNS',sorted(set(x[4][0] for x in socket.getaddrinfo('models.github.ai',443))))
-              print('Proxy variable names',[k for k in __import__('os').environ if k.lower().endswith('_proxy')])
-              for endpoint in ['https://models.github.ai/catalog/models','https://models.github.ai/inference/chat/completions']:
-                headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','x-ms-useragent':'github-cli-models','x-ms-user-agent':'github-cli-models'}
-                payload=None if endpoint.endswith('/models') else json.dumps({'model':'openai/gpt-4.1-mini','messages':[{'role':'system','content':'Return only a JSON object with a description field.'},{'role':'user','content':'Describe preparing a landing page.'}],'response_format':{'type':'json_object'},'stream':False,'max_tokens':200}).encode()
-                req=urllib.request.Request(endpoint,headers=headers,data=payload)
-                try:
-                  with urllib.request.urlopen(req,timeout=25) as r:
-                    raw=r.read();safe=raw.decode('utf8','replace').replace(token,'[redacted]');print('Provider',endpoint.split('/')[-1],r.status,r.headers.get('Content-Type'),'bytes',len(raw),'sample',safe[:160])
-                except urllib.error.HTTPError as e:print('Provider HTTP',e.code)
-                except Exception as e:print('Provider error',type(e).__name__)
+            import json,os,urllib.request,urllib.error
+            key=os.environ.get('SMART_TODO_AI_KEY','').strip()
+            print('New OpenAI key configured:',bool(key))
+            if not key: raise SystemExit('Missing GitHub repository secret SMART_TODO_AI_KEY')
+            payload={'model':'gpt-4.1-mini','max_tokens':40,'response_format':{'type':'json_object'},'messages':[{'role':'system','content':'Return JSON only.'},{'role':'user','content':'Return {"connected":true}'}]}
+            req=urllib.request.Request('https://api.openai.com/v1/chat/completions',data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
+            try:
+              with urllib.request.urlopen(req,timeout=25) as r:
+                result=json.load(r)
+                answer=json.loads(result['choices'][0]['message']['content'])
+                assert answer.get('connected') is True
+                print('OpenAI real JSON response verified:',r.status)
+            except urllib.error.HTTPError as e:
+              raw=e.read()
+              try: code=json.loads(raw).get('error',{}).get('code')
+              except Exception: code='unreadable'
+              print('OpenAI failed:',e.code,'error code:',code)
+              raise SystemExit(1)
             PY
