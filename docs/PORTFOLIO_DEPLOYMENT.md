@@ -60,3 +60,11 @@ CI deployment script targets the former static directory; use this new workflow
 for portfolio releases. The existing portfolio API route is unrelated to the
 new page and still shares port 3000 with the Next.js application; do not start a
 second server on that port without reviewing the server configuration.
+
+## Current redesign release
+
+Successful deployment: https://github.com/giorgi0203/portfolio/actions/runs/42684688238.
+Source includes the personal-workshop redesign and generated portrait.
+Artifact commit: `2cd67a1c8e9ca2de4148ed4b5ea149a164803fc9`.
+SHA-256: `0271393d766790abfce41dcf35edceb7329fe755e61396c4dd921e767ce79e22`.
+The installer verified all four HTTPS sites after the release switch.
