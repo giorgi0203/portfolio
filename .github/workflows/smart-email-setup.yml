@@ -1,0 +1,49 @@
+name: Configure workspace verification email
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/smart-email-setup.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        env:
+          SMART_TODO_EMAIL_KEY: ${{ secrets.SMART_TODO_EMAIL_KEY }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: SMART_TODO_EMAIL_KEY
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            sudo -n --preserve-env=SMART_TODO_EMAIL_KEY python3 - <<'PY'
+            import json,os,urllib.request,urllib.error,pathlib,grp
+            key=os.environ.get('SMART_TODO_EMAIL_KEY','').strip()
+            if not key:raise SystemExit('Missing SMART_TODO_EMAIL_KEY')
+            def api(path,body=None):
+              req=urllib.request.Request('https://api.resend.com'+path,headers={'Authorization':'Bearer '+key,'Content-Type':'application/json','User-Agent':'SmartTodo-Setup/1.0'},data=None if body is None else json.dumps(body).encode())
+              try:
+                with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
+              except urllib.error.HTTPError as e:raise SystemExit('Email setup API returned HTTP '+str(e.code))
+            domains=api('/domains?limit=100')['data']
+            domain=next((d for d in domains if d['name']=='mail.giorgi.app'),None)
+            if domain is None:domain=api('/domains',{'name':'mail.giorgi.app','region':'eu-west-1'})
+            domain=api('/domains/'+domain['id'])
+            print('EMAIL_DOMAIN_JSON='+json.dumps({'id':domain['id'],'name':domain['name'],'status':domain['status'],'records':domain['records']}))
+            directory=pathlib.Path('/etc/smart-todolist');directory.mkdir(mode=0o750,exist_ok=True)
+            os.chown(directory,0,grp.getgrnam('www-data').gr_gid);os.chmod(directory,0o750)
+            target=directory/'email.json';temporary=directory/'email.json.new'
+            if target.exists():
+              import shutil,time
+              backup=pathlib.Path('/var/backups/smart-todolist/email-'+str(int(time.time()))+'.json');backup.parent.mkdir(mode=0o700,parents=True,exist_ok=True);shutil.copy2(target,backup);os.chmod(backup,0o600)
+            temporary.write_text(json.dumps({'apiKey':key,'from':'Smart Todo <noreply@mail.giorgi.app>','baseUrl':'https://api.resend.com','domainId':domain['id']}))
+            os.chmod(temporary,0o640);os.chown(temporary,0,grp.getgrnam('www-data').gr_gid);os.replace(temporary,target)
+            print('Email credential saved privately on the droplet')
+            PY
