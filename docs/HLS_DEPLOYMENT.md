@@ -52,27 +52,28 @@ manifest is not changed by this config.
 
 ## Connecting this cloud environment
 
-No DigitalOcean credentials or SSH key were present during inspection. GitHub
-read access worked; GitHub API and giorgi.app HTTPS were blocked by the current
-network allowlist. Draft configuration API updates also failed.
+DigitalOcean API access is configured through the HTTP secret
+`DIGITALOCEAN_ACCESS_TOKEN`, restricted to `api.digitalocean.com`. The token was
+verified for droplet reads and creating the `hls-player` DNS record. No token
+values belong in this repository. Domain registration remains at domenebi.ge;
+the authoritative zone is managed by DigitalOcean.
 
-Allow `api.github.com`, `api.digitalocean.com`, `giorgi.app` and
-`hls-player.giorgi.app` in Environment settings, preserving other domains.
-If using DigitalOcean API access, add an HTTP secret called
-`DIGITALOCEAN_ACCESS_TOKEN`, destined only for `api.digitalocean.com`, with a
-DigitalOcean token permitted to read droplets and manage the required DNS
-records. Enter the token securely in settings, never in chat or the repo.
-An API token manages resources/DNS; it does not provide SSH login to an existing
-droplet. Existing GitHub Actions secrets cannot be retrieved as plaintext.
+Direct SSH from this cloud environment was refused on port 22. Deployment instead
+uses the existing GitHub Actions secrets `DROPLET_HOST`, `DROPLET_USERNAME`,
+`DROPLET_SSH_KEY` and `DROPLET_SSH_PASSPHRASE`. A read-only workflow verified that
+those credentials connect to the intended droplet and that Nginx and Certbot are
+installed. The HLS workflow uses Node 24, runs tests/lint/build, uploads a separate
+static release, and invokes `deploy/install-hls-player.sh`. This script preserves
+the apex site, tests Nginx, switches the HLS release symlink, and provisions HTTPS
+through the existing Certbot account. Old releases remain for rollback. It
+preserves Certbot's TLS additions on subsequent runs.
 
-Direct SSH additionally requires the correct user/port, a securely provisioned
-key, a verified host fingerprint and an allowed TCP route. The initial direct
-probe to port 22 was refused; the username `root` is unconfirmed. Alternatively,
-GitHub Actions can deploy using its existing droplet secrets once GitHub API and
-write access are verified. Do not assume permissions merely from Git read access.
-
-The Nginx file is a prepared configuration, not proof it has been installed or
-that the subdomain is live. No remote configuration was changed during preparation.
+The workflow runs when the dedicated `codex/hls-player-subdomain` branch changes
+HLS/deployment files, and also supports manual dispatch once registered on the
+default branch. Deployment does not depend on retrieving SSH secrets as plaintext.
+GitHub Actions log reads require `results-receiver.actions.githubusercontent.com`
+in the environment allowlist alongside `api.github.com`, `api.digitalocean.com`,
+`giorgi.app`, and `hls-player.giorgi.app`.
 
 ## Local validation
 
