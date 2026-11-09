@@ -54,3 +54,11 @@ HTTPS browser tests in this cloud use curl's normal TLS verification to relay
 public site assets into Chromium because its isolated profile does not trust the
 cloud proxy CA. No TLS verification is disabled. HLS media tests use a generated
 local video fixture rather than relying on third-party demo-stream availability.
+
+## Published release
+
+Deployed via https://github.com/giorgi0203/portfolio/actions/runs/42677436100.
+Artifact commit: `aa8ed48ffb4536ea1262a0806dd5bf2025761b4a`.
+SHA-256: `4182d0e4ee33827ded84319a35641d771b66700e1583c9d6a4a34af7b993ca75`.
+The installer verified the served index matches the release and that all four
+HTTPS sites respond successfully after the Nginx root update.
