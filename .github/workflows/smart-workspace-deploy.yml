@@ -32,7 +32,8 @@ jobs:
               for endpoint,model in [('https://models.inference.ai.azure.com/chat/completions','gpt-4o-mini'),('https://models.github.ai/inference/chat/completions','openai/gpt-4.1-mini')]:
                 start=time.monotonic();req=urllib.request.Request(endpoint,headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},data=json.dumps({'model':model,'messages':[{'role':'user','content':'Reply with the single word ready.'}],'max_tokens':8}).encode())
                 try:
-                  with urllib.request.urlopen(req,timeout=20) as r:result=json.load(r);print('AI probe',model,'HTTP',r.status,'seconds',round(time.monotonic()-start,2),'has_reply',bool(result.get('choices')))
-                except urllib.error.HTTPError as e:print('AI probe',model,'HTTP',e.code,'seconds',round(time.monotonic()-start,2))
-                except Exception as e:print('AI probe',model,type(e).__name__,'seconds',round(time.monotonic()-start,2))
+                  with urllib.request.urlopen(req,timeout=20) as r:
+                    raw=r.read();print('AI response',model,'HTTP',r.status,'content_type',r.headers.get('Content-Type'),'bytes',len(raw),'final_host',urllib.parse.urlparse(r.url).netloc,'html',raw.lstrip().startswith(b'<'));result=json.loads(raw);print('AI choices',bool(result.get('choices')))
+                except urllib.error.HTTPError as e:print('AI probe',model,'HTTP',e.code,'content_type',e.headers.get('Content-Type'),'seconds',round(time.monotonic()-start,2))
+                except Exception as e:print('AI probe',model,type(e).__name__,str(getattr(e,'reason',''))[:180],'seconds',round(time.monotonic()-start,2))
             PY
