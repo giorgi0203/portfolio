@@ -27,11 +27,17 @@ jobs:
             import json,os,urllib.request,urllib.error,pathlib,grp
             key=os.environ.get('SMART_TODO_EMAIL_KEY','').strip()
             if not key:raise SystemExit('Missing SMART_TODO_EMAIL_KEY')
+            print('Credential has Resend format:',key.startswith('re_'),'contains whitespace:',any(c.isspace() for c in key))
             def api(path,body=None):
               req=urllib.request.Request('https://api.resend.com'+path,headers={'Authorization':'Bearer '+key,'Content-Type':'application/json','User-Agent':'SmartTodo-Setup/1.0'},data=None if body is None else json.dumps(body).encode())
               try:
                 with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
-              except urllib.error.HTTPError as e:raise SystemExit('Email setup API returned HTTP '+str(e.code))
+              except urllib.error.HTTPError as e:
+                raw=e.read(2000).decode('utf8','replace').replace(key,'[redacted]')
+                try:
+                  info=json.loads(raw);print('Email setup error:',e.code,str(info.get('name',''))[:80],str(info.get('message',''))[:240])
+                except Exception:print('Email setup error:',e.code,'non-JSON response')
+                raise SystemExit(1)
             domains=api('/domains?limit=100')['data']
             domain=next((d for d in domains if d['name']=='mail.giorgi.app'),None)
             if domain is None:domain=api('/domains',{'name':'mail.giorgi.app','region':'eu-west-1'})
