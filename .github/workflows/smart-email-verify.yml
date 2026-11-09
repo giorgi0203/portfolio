@@ -28,11 +28,15 @@ jobs:
               try:
                 with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
               except urllib.error.HTTPError as e:raise SystemExit('Email API returned HTTP '+str(e.code))
-            api('/domains/'+cfg['domainId']+'/verify',{})
+            domain=api('/domains/'+cfg['domainId'])
+            if domain['status'] not in ['pending','verified']:api('/domains/'+cfg['domainId']+'/verify',{})
             for attempt in range(6):
               domain=api('/domains/'+cfg['domainId'])
               if domain['status']=='verified':break
               time.sleep(5)
+            for name,kind in [('resend._domainkey.mail.giorgi.app','TXT'),('send.mail.giorgi.app','MX'),('send.mail.giorgi.app','TXT'),('rsend.mail.giorgi.app','CNAME')]:
+              with urllib.request.urlopen('https://dns.google/resolve?name='+name+'&type='+kind,timeout=15) as r:answer=json.load(r)
+              print('Public DNS',kind,name,'answers:',len(answer.get('Answer',[])))
             print('EMAIL_VERIFICATION_JSON='+json.dumps({'status':domain['status'],'records':[{'type':r['type'],'name':r['name'],'status':r['status']} for r in domain['records']]}))
             if domain['status']=='verified':
               result=api('/emails',{'from':cfg['from'],'to':['delivered@resend.dev'],'subject':'Smart Todo verification delivery check','text':'Verification email delivery check for giorgi.app. This is a test message to the provider test mailbox.'})
