@@ -46,3 +46,11 @@ The production build is written to `dist/apps/portfolio/`.
 GitHub Actions installs the static portfolio on a DigitalOcean droplet served by Nginx. The [portfolio workflow](.github/workflows/portfolio-deploy.yml) runs when its workflow file changes on `codex/portfolio-subdomains`. It downloads a prebuilt bundle pinned to a commit on `deploy/portfolio-artifacts` and verifies its SHA-256 checksum before installation. A new release requires a validated build and updated artifact pins. See the [portfolio deployment guide](docs/PORTFOLIO_DEPLOYMENT.md) for the bundle layout and installation process.
 
 [HLS Player](.github/workflows/hls-player-deploy.yml) and [Smart Todo List](.github/workflows/smart-workspace-deploy.yml) deploy through separate workflows.
+
+## Shared sign-in and cross-project analytics
+
+Use Command+. (Control+. on Windows/Linux) or the Owner sign-in link on the homepage to open the shared Giorgi account dialog. Authentication runs at `auth.giorgi.app` in a separate service. Existing Smart Todo accounts continue to work. The main page embeds the trusted auth UI and opens `https://auth.giorgi.app/analytics` after sign-in; analytics remain restricted to the configured owner's verified account.
+
+Smart Todo uses a short-lived authorization code with PKCE and a host-only app cookie. HLS can display the shared account while keeping playback public. The dashboard combines page-view/referrer/outbound-click counts across the main site, Smart Todo, HLS and auth, with per-site filters. Older main-site counts are retained; subdomain counts begin with this release. No tracking cookies or AI requests are used for analytics. Do Not Track and Global Privacy Control are respected.
+
+The shared service source and its protocol/deployment notes live in the [Smart Todo repository](https://github.com/giorgi0203/smart-todolist). New server apps need an explicitly registered client and exact callback URL; the identity cookie is never shared across `.giorgi.app`.
