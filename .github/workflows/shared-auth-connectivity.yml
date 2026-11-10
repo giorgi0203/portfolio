@@ -1,0 +1,41 @@
+name: Diagnose public shared-account connectivity
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/shared-auth-connectivity.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test public DNS and HTTPS from outside the droplet
+        run: |
+          dig +short auth.giorgi.app A
+          dig +short auth.giorgi.app AAAA
+          for options in '-4 --http1.1' '-4 --http2' '-4 --tls-max 1.2' '-6 --http1.1'; do
+            curl $options --max-time 15 --silent --show-error --head https://auth.giorgi.app/embed || true
+          done
+      - name: Inspect identity service and Nginx listeners
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            free -m
+            df -h /tmp
+            systemctl show giorgi-identity smart-todolist-web -p Id -p ActiveState -p NRestarts -p MemoryCurrent -p Result
+            sudo -n ss -lntp | grep -E ':443|:80 |:3100|:3000'
+            sudo -n nginx -T 2>&1 | grep -E 'configuration file|listen |server_name|ssl_protocols|ssl_reject_handshake|add_header|proxy_pass'
+            curl -sS -I --max-time 10 https://auth.giorgi.app/embed
+            journalctl -k --since '1 hour ago' --no-pager | grep -E 'Out of memory|Killed process|oom' | tail -8 || true
