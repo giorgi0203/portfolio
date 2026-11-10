@@ -21,3 +21,6 @@ Build and deploy all four ideas while keeping the retired MCP services disabled 
 ## Completion record
 
 Implementation and local validation complete: five actual Angular starter/solution browser exercises, nine Lab unit/privacy checks, eight HLS unit cases plus real H264/AAC browser fixtures, seven real HTTP/TLS/history health tests, five toolbox core cases plus browser workflows, eight portfolio checks, and 33 shared-account unit/security cases plus actual three-role HTTP integration. Live rollout and verification follow from the pinned active-products workflow. Monitoring history starts at rollout; uptime is calculated only from recorded observations.
+
+
+Live rollout completed successfully: https://github.com/giorgi0203/portfolio/actions/runs/42877931796 . All four independent public browser suites passed. Production shared-learning HTTPS checks passed including saved experiments, progress, ownership, CSRF, distinct host-only cookies and global logout. Toolbox and status DNS/TLS are live; retired MCP endpoints still return410. Product code, preview and utility inputs do not enter analytics. Public homepage links are the final rollout stage.
