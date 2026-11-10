@@ -34,7 +34,7 @@ jobs:
             sudo -n bash "$stage/deploy/install-extra-apps.sh" "$stage" 850c4eeb98527b3d8a2d491185528cfdc2aa585b
       - uses: actions/checkout@v4
         with:
-          ref: 850c4eeb98527b3d8a2d491185528cfdc2aa585b
+          ref: 5d64e8ddb3ede7fcff5e257e18514d43f48fa026
       - uses: actions/setup-node@v4
         with:
           node-version: 24
