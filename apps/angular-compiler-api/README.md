@@ -248,3 +248,5 @@ export class MyComponent {
 ## Deployed playground
 
 https://angular-compiler.giorgi.app/ serves the UI and API on the same origin. It uses the pinned Angular 21 compiler; a version hint does not install another compiler. The standalone service and production-only dependencies are packaged before deployment. See [deployment notes](../../docs/EXTRA_APPS_DEPLOYMENT.md) for service limits and checks.
+
+For the local editor, start the API and `npx nx serve angular-compiler-ui`, then open http://localhost:4202. The dev server proxies `/api` and `/health` to port 3001; production Nginx serves them on the playground's HTTPS origin.

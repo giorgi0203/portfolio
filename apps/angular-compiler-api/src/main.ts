@@ -20,6 +20,8 @@ app.use(express.json({ limit: '200kb' }));
 // CORS: Only allow local development origin
 const allowedOrigins = [
   'https://angular-compiler.giorgi.app',
+  'http://localhost:4202',
+  'http://127.0.0.1:4202',
   'http://localhost:4200',
   'http://localhost:4201',
   'http://127.0.0.1:4200',

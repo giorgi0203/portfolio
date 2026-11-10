@@ -72,6 +72,7 @@ async function mcp(base) {
   await mcp(urls.example + '/mcp');
   await mcp(urls.gateway + '/mcp/example');
   assert.equal((await get(urls.gateway + '/mcp/missing')).status, 404);
+  assert.equal((await get(urls.gateway + '/mcp/__proto__')).status, 404);
   const projects = await (await get(urls.api + '/api/projects')).json();
   assert.equal(projects.length, 6);
   assert.ok(projects.every(project => project.liveUrl && project.githubUrl));

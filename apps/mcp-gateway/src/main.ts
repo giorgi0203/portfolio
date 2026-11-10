@@ -47,7 +47,7 @@ interface McpBackend {
 const backends: Record<string, McpBackend> = {
   example: {
     name: 'example-mcp',
-    url: process.env.EXAMPLE_MCP_URL || 'http://127.0.0.1:3331',
+    url: process.env.EXAMPLE_MCP_URL || 'http://127.0.0.1:3100',
     description: 'Calculator, datetime, and Nx project tools',
   },
   // Add more backends:
@@ -141,7 +141,7 @@ const server = http.createServer(async (req, res) => {
   const mcpMatch = url.match(/^\/mcp\/([^/]+)$/);
   if (mcpMatch) {
     const backendKey = mcpMatch[1];
-    const backend = backends[backendKey];
+    const backend = Object.prototype.hasOwnProperty.call(backends, backendKey) ? backends[backendKey] : undefined;
 
     if (!backend) {
       res.writeHead(404, { 'Content-Type': 'application/json' });

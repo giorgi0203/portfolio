@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/angular-compiler-ui",
         "browser": "apps/angular-compiler-ui/src/main.ts",
@@ -24,7 +26,9 @@
             "output": "/assets/monaco/min"
           }
         ],
-        "styles": ["apps/angular-compiler-ui/src/styles.css"]
+        "styles": [
+          "apps/angular-compiler-ui/src/styles.css"
+        ]
       },
       "configurations": {
         "production": {
@@ -61,14 +65,20 @@
           "buildTarget": "angular-compiler-ui:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4202,
+        "proxyConfig": "apps/angular-compiler-ui/proxy.conf.json"
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint"
     },
     "test": {
       "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "outputs": [
+        "{options.reportsDirectory}"
+      ],
       "options": {
         "reportsDirectory": "../../coverage/apps/angular-compiler-ui"
       }

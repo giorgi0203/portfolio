@@ -72,6 +72,7 @@ export class CompilerApiService {
     return this.http
       .get<{ status: string }>('/health')
       .pipe(
+        timeout(5000),
         map((response) => response.status === 'healthy'),
         catchError(() => [false])
       );
