@@ -36,12 +36,12 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/0becb889b0fa38d6165fd76fc21491f1c5fb8298/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'c375fdf416aa33e263d3c9393ae9047c98838b380085923342c5a962bc86b479' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/996b7549265ce8f4b2973ecd18c50eae27869341/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '9cbbc66b03f4e74ae4f6d9dcbe134ebdf66b60c535ec94b9fb5bef3c96ef68ab' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
-      - name: Verify the six-app showcase and shared sign-in in Chrome
+      - name: Verify the three-app showcase and shared sign-in in Chrome
         run: |
           npm install --prefix "$RUNNER_TEMP/showcase-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
           node <<'JS'
@@ -54,14 +54,15 @@ jobs:
               page.setDefaultTimeout(45000);
               await page.goto('https://giorgi.app/',{waitUntil:'domcontentloaded'});
               await page.getByRole('button',{name:'Owner sign-in',exact:false}).waitFor();
-              assert.equal(await page.locator('[data-app-card]').count(),6);
-              for(const [title,host] of [['Angular Compiler','angular-compiler'],['Example MCP','example-mcp'],['MCP Gateway','mcp'],['Portfolio API','api']])assert.equal(await page.getByRole('link',{name:'Open '+title,exact:true}).getAttribute('href'),'https://'+host+'.giorgi.app/');
+              assert.equal(await page.locator('[data-app-card]').count(),3);
+              for(const [title,host] of [['Angular Compiler','angular-compiler']])assert.equal(await page.getByRole('link',{name:'Open '+title,exact:true}).getAttribute('href'),'https://'+host+'.giorgi.app/');
+              for(const host of ['example-mcp','mcp','api'])assert.equal(await page.locator('a[href^="https://'+host+'.giorgi.app"]').count(),0);
               await page.keyboard.press('Meta+Period');
               await page.frameLocator('iframe[title="Giorgi account sign-in"]').getByRole('heading',{name:'Good to see you.',exact:true}).waitFor();
               await page.getByRole('button',{name:'Close sign-in',exact:true}).click();
               await page.setViewportSize({width:390,height:844});
               assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-              console.log('PASS live six-app gallery, correct HTTPS links, shared login modal and mobile layout');
+              console.log('PASS live three-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
           })().catch(error=>{console.error(error);process.exitCode=1;});
           JS

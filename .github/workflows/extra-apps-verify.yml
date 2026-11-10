@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 5d64e8ddb3ede7fcff5e257e18514d43f48fa026
+          ref: b76949a45bc24da7fb226ec29183b37a9da281af
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -21,7 +21,7 @@ jobs:
         run: |
           node <<'JS'
           const assert=require('node:assert/strict');
-          (async()=>{for(const name of ['angular-compiler','example-mcp','mcp','api']){
+          (async()=>{for(const name of ['angular-compiler','api']){
             const origin='https://'+name+'.giorgi.app',started=Date.now();
             const response=await fetch(origin+'/api/analytics/event',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({kind:'pageview',label:'home'}),signal:AbortSignal.timeout(10000)});
             assert.equal(response.status,200,origin+' analytics status');assert.equal((await response.json()).ok,true);
@@ -34,6 +34,7 @@ jobs:
           EXAMPLE_URL: https://example-mcp.giorgi.app
           GATEWAY_URL: https://mcp.giorgi.app
           CATALOG_URL: https://api.giorgi.app
+          MCP_DISABLED: '1'
           CHROME_PATH: /usr/bin/google-chrome
         run: |
           npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
