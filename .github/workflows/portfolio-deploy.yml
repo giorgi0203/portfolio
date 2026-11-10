@@ -36,8 +36,8 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/af217ffb19a075f911fa4265c1ea255ef8ebf08f/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'ccfdf0583fd3052aed25d9259199d65634a253925a241ee637b94d8b1483ce5a' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/04e35251e1a4c97f946e2dfc2154e5111e35debd/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'e6f05d4f817817f8e42bdfe16e0798714c5974122cff98780e0af7fed2d45982' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
@@ -75,7 +75,10 @@ jobs:
               await page.getByRole('button',{name:'Cat: pause',exact:true}).click();
               assert.equal(await page.locator('[data-cat-sidekick]').getAttribute('data-state'),'paused');
               await page.getByRole('button',{name:'Cat: play',exact:true}).click();
-              console.log('PASS live cartoon sidekick, click-through artwork and pause/play');
+              await page.getByRole('button',{name:'Pet the cat',exact:true}).waitFor();
+              await page.getByRole('button',{name:'Play with the cat',exact:true}).waitFor();
+              await page.getByRole('button',{name:'Let the cat nap',exact:true}).waitFor();
+              console.log('PASS live illustrated cat, activity controls, click-through artwork and pause/play');
               console.log('PASS live GA consent and configured property (Google script stubbed)');
               console.log('PASS live five-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
