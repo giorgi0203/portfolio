@@ -83,8 +83,18 @@
 <router-outlet></router-outlet>
 
 <button class="owner-entry" type="button" (click)="openOwnerLogin()">Owner sign-in <kbd>⌘ .</kbd></button>
-<dialog #ownerDialog class="owner-dialog" aria-labelledby="owner-title" (close)="loginOpen=false">
+<dialog #ownerDialog class="owner-dialog" aria-labelledby="owner-title" (close)="ownerLoginClosed()">
   <header><h2 id="owner-title">Your Giorgi account</h2><button type="button" aria-label="Close sign-in" (click)="closeOwnerLogin()">×</button></header>
-  @if (loginOpen) {<iframe #identityFrame [src]="authEmbed" title="Giorgi account sign-in" referrerpolicy="strict-origin"></iframe>}
+  @if (loginOpen) {
+    <div class="identity-window">
+      <iframe #identityFrame [src]="authEmbed" [style.visibility]="identityStatus==='ready'?'visible':'hidden'" title="Giorgi account sign-in" referrerpolicy="strict-origin"></iframe>
+      @if (identityStatus!=='ready') {
+        <div class="identity-status" role="status" aria-live="polite">
+          @if (identityStatus==='loading') {<span class="identity-spinner" aria-hidden="true"></span><p>Connecting to your Giorgi account…</p>}
+          @else {<h3>Let’s try that again.</h3><p>The sign-in window couldn’t connect. Retry, or open the account page to sign in or register.</p><button type="button" (click)="retryOwnerLogin()">Retry sign-in</button><a href="https://auth.giorgi.app/?continue=/analytics">Continue on the account page ↗</a>}
+        </div>
+      }
+    </div>
+  }
   <p><a href="https://auth.giorgi.app/?continue=/analytics">Open sign-in in a full page</a></p>
 </dialog>
