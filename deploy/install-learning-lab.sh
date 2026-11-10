@@ -36,8 +36,12 @@ ln -sfn "$release" "$base/current"
 install -m 644 "$stage/site.next" "$site.next"
 mv -Tf "$site.next" "$site"
 nginx -t;systemctl reload nginx
-curl -fsS --max-time 20 --resolve angular-compiler.giorgi.app:443:127.0.0.1 https://angular-compiler.giorgi.app/ -o "$stage/served.html"
-cmp "$stage/served.html" "$release/index.html"
+ready=false
+for attempt in {1..10};do
+ if curl -fsS --max-time 20 --resolve angular-compiler.giorgi.app:443:127.0.0.1 https://angular-compiler.giorgi.app/ -o "$stage/served.html" && cmp -s "$stage/served.html" "$release/index.html";then ready=true;break;fi
+ sleep 1
+done
+$ready
 for host in giorgi.app auth.giorgi.app hls-player.giorgi.app toolbox.giorgi.app status.giorgi.app api.giorgi.app smart-todolist.giorgi.app;do curl -fsSL --max-time 20 "https://$host/" >/dev/null;done
 [[ $(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://angular-compiler.giorgi.app/api/learning/experiments) == 401 ]]
 for host in example-mcp mcp;do [[ $(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "https://$host.giorgi.app/") == 410 ]];done
