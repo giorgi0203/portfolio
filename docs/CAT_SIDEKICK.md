@@ -1,10 +1,12 @@
-# Cartoon sidekick
+# The illustrated cat
 
-The portfolio has a small black-and-white SVG cat inspired by Giorgi’s cat. It watches the pointer, crouches before occasional jumps, and perches on the visible project cards. After inactivity it rests and sleeps. The artwork is decorative and lets clicks pass through to the page. Perch selection avoids headings, filters and neighboring cards; when there is no clear place to sit, the cat steps away.
+The portfolio has one layered, illustrated tabby-and-white cat, modeled after the cat in Giorgi’s portrait. GSAP (pinned in package.json) animates its head, ears, eyes, jaw, paws and segmented tail. The original SVG stays local; no animation CDN, tracking event, or image service is involved.
 
-Use **Cat: pause** / **Cat: play** at the top right on desktop or below the page on phones to stop or resume its antics. The preference stays in this browser. Touch screens and reduced-motion settings use a stationary companion. The cat steps away while editing a form, using the sign-in dialog, or making an analytics consent choice.
+The cat lives in the document beside the portrait or inside a project preview. Scrolling moves it out of view with its home; it does not follow the viewport. Deliberately hovering over another project invites it to that card. Transfers between visible homes use a short hop; transfers from an offscreen home use a brief fade so it never flies across the full page.
 
-The component owns its listeners, timers and animation frames and cleans them up when destroyed. Pointer/animation work runs outside Angular’s change detection. No new package, tracking event, or remote image service is needed.
+Nearby controls let visitors pet it, play with it, let it nap, or pause/resume. The pause choice stays in this browser. Idle behaviors include blinking, breathing, ear flicks, grooming, yawning, stretching and sleep. Reduced-motion settings show a still character; touch visits use explicit controls rather than cursor chasing.
+
+Animation work runs outside Angular change detection. Timelines pause when the cat’s home is offscreen or the document is hidden. The component cleans up its listeners, observers and GSAP context when destroyed. The cat and its controls step away during consent choices, sign-in, and form editing. Artwork lets pointer events pass through; activity controls remain normal keyboard-accessible buttons.
 
 Validation:
 
@@ -14,4 +16,4 @@ node scripts/cat-sidekick-browser.cjs
 node scripts/seo-analytics-browser.cjs
 ```
 
-The browser checks use the production bundle with local fixtures and intercept external requests. They do not submit contact messages or send Google Analytics events. Deployment separately checks the live gallery, cat control, consent flow, sign-in and SEO assets.
+The browser checks exercise the production bundle with local fixtures and intercept external requests. They verify actual rig movement, document anchoring, project invitations, activity controls, pause persistence, reduced motion and touch layouts, without submitting messages or sending Google Analytics events. Deployment separately checks the live gallery, cat controls, consent flow, sign-in and SEO assets.

@@ -43,6 +43,7 @@
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "fastify": "^5.6.2",
+    "gsap": "3.15.1",
     "hls.js": "^1.6.15",
     "monaco-editor": "^0.45.0",
     "ngx-monaco-editor-v2": "^20.3.0",

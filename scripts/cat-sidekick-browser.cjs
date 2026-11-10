@@ -6,14 +6,18 @@ const { chromium } = require(
     '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright',
 );
 
-// Exercise the production bundle at its actual origin without sending analytics
-// or contact messages, navigating to project apps, or depending on the network.
+// Exercise the production bundle without sending analytics/contact messages or
+// navigating to the real project apps. Screenshots retain the actual site art.
 const root = path.resolve('dist/apps/portfolio');
 async function isolatedContext(browser, options = {}) {
   const context = await browser.newContext(options);
-  await context.addInitScript(() =>
-    localStorage.setItem('giorgi-google-analytics-consent-v1', 'deny'),
-  );
+  await context.addInitScript(() => {
+    try {
+      localStorage.setItem('giorgi-google-analytics-consent-v1', 'deny');
+    } catch {
+      /* Cross-origin/opaque auth frames have no storage fixture. */
+    }
+  });
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.hostname !== 'giorgi.app') return route.abort();
@@ -29,6 +33,93 @@ async function isolatedContext(browser, options = {}) {
   });
   return context;
 }
+async function start(context) {
+  const page = await context.newPage();
+  page.setDefaultTimeout(12000);
+  page.on('pageerror', (error) => {
+    page.__errors.push(error.message);
+  });
+  page.__errors = [];
+  await page.goto('https://giorgi.app/', { waitUntil: 'domcontentloaded' });
+  await page.locator('[data-cat-sprite]').waitFor({ state: 'visible' });
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-cat-sprite]')?.dataset.surface ===
+      'portrait',
+  );
+  return page;
+}
+async function settled(page) {
+  await page.waitForFunction(
+    () =>
+      !['jumping', 'crouching'].includes(
+        document.querySelector('[data-cat-sprite]')?.dataset.state,
+      ),
+  );
+}
+async function documentPosition(page) {
+  return page.locator('[data-cat-sprite]').evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      x: rect.x + scrollX,
+      y: rect.y + scrollY,
+      surface: node.dataset.surface,
+    };
+  });
+}
+async function pose(page, selectors) {
+  return page
+    .locator('[data-cat-sprite]')
+    .evaluate(
+      (node, selectors) =>
+        selectors.map(
+          (selector) =>
+            getComputedStyle(node.querySelector(selector)).transform,
+        ),
+      selectors,
+    );
+}
+async function expectPoseChange(page, selectors, before, message) {
+  await page.waitForFunction(
+    ({ selectors, before }) => {
+      const root = document.querySelector('[data-cat-sprite]');
+      return (
+        JSON.stringify(
+          selectors.map(
+            (selector) =>
+              getComputedStyle(root.querySelector(selector)).transform,
+          ),
+        ) !== JSON.stringify(before)
+      );
+    },
+    { selectors, before },
+  );
+  assert.notDeepEqual(await pose(page, selectors), before, message);
+}
+async function noControlCollision(page, selectors) {
+  return page.locator('[data-cat-sprite]').evaluate((node, selectors) => {
+    const cat = node.getBoundingClientRect();
+    return ![...document.querySelectorAll(selectors)].some((control) => {
+      const rect = control.getBoundingClientRect();
+      return (
+        rect.width &&
+        rect.height &&
+        cat.left < rect.right &&
+        cat.right > rect.left &&
+        cat.top < rect.bottom &&
+        cat.bottom > rect.top
+      );
+    });
+  }, selectors);
+}
+async function assertNoOverflow(page) {
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    'cat and controls create no horizontal overflow',
+  );
+}
 
 (async () => {
   const browser = await chromium.launch({
@@ -40,71 +131,41 @@ async function isolatedContext(browser, options = {}) {
     const desktop = await isolatedContext(browser, {
       viewport: { width: 1440, height: 1000 },
     });
-    const page = await desktop.newPage();
-    page.setDefaultTimeout(20000);
-    await page.goto('https://giorgi.app/', { waitUntil: 'domcontentloaded' });
-    const cat = page.locator('[data-cat-sidekick]');
+    const page = await start(desktop);
+    await settled(page);
     const sprite = page.locator('[data-cat-sprite]');
-    await cat.waitFor();
-    await page.waitForFunction(
-      () =>
-        document.querySelector('[data-cat-sidekick]')?.dataset.motion ===
-        'full',
+    assert.equal(
+      await sprite.evaluate((node) => getComputedStyle(node).position),
+      'absolute',
+      'cat belongs to the document, not the viewport',
     );
-    await page.waitForTimeout(1200);
-    await page.waitForFunction(
-      () =>
-        !['jumping', 'crouching'].includes(
-          document.querySelector('[data-cat-sidekick]')?.dataset.state,
-        ),
-    );
-    assert.ok(
-      await sprite.evaluate((node) => {
-        const cat = node.getBoundingClientRect();
-        return ![...document.querySelectorAll('.cat-label,.human-stamp')].some(
-          (control) => {
-            const rect = control.getBoundingClientRect();
-            return (
-              cat.left < rect.right &&
-              cat.right > rect.left &&
-              cat.top < rect.bottom &&
-              cat.bottom > rect.top
-            );
-          },
-        );
-      }),
-      'initial perched cat does not cover the portrait labels',
-    );
-    await page.screenshot({ path: '/tmp/cat-sidekick-hero.png' });
     assert.equal(
       await sprite.evaluate((node) => getComputedStyle(node).pointerEvents),
       'none',
     );
-    await page.mouse.move(300, 270);
-    const lookBefore = await cat.evaluate((node) => [
-      node.style.getPropertyValue('--look-x'),
-      node.style.getPropertyValue('--look-y'),
-    ]);
-    await page.mouse.move(1350, 160);
-    await page.waitForFunction((before) => {
-      const cat = document.querySelector('[data-cat-sidekick]');
-      return (
-        cat &&
-        JSON.stringify([
-          cat.style.getPropertyValue('--look-x'),
-          cat.style.getPropertyValue('--look-y'),
-        ]) !== JSON.stringify(before)
-      );
-    }, lookBefore);
+    assert.ok(
+      await noControlCollision(
+        page,
+        '.cat-label,.human-stamp,h1,.hero-actions',
+      ),
+      'portrait companion leaves labels and controls clear',
+    );
+    await page.screenshot({ path: '/tmp/cat-v2-hero.png' });
 
-    // Observe the actual crouch / flight / landing, with no test-only setters.
-    await page.evaluate(() => {
-      window.__catStates = [];
-      const cat = document.querySelector('[data-cat-sidekick]');
-      new MutationObserver(() =>
-        window.__catStates.push(cat.dataset.state),
-      ).observe(cat, { attributes: true, attributeFilter: ['data-state'] });
-    });
+    await page.mouse.move(200, 200);
+    const looking = await pose(page, ['.cat-head', '.cat-pupil']);
+    await page.mouse.move(1350, 350);
+    await expectPoseChange(
+      page,
+      ['.cat-head', '.cat-pupil'],
+      looking,
+      'GSAP rig turns its head/eyes toward the pointer',
+    );
+
+    // Native scrolling must not move the cat to a new habitat or make it float
+    // in the viewport. Only a deliberate project hover selects another home.
+    await settled(page);
+    const beforeScroll = await documentPosition(page);
     const card = page.locator('[data-app-card]').first();
     await card.evaluate((node) =>
       window.scrollTo({
@@ -112,38 +173,37 @@ async function isolatedContext(browser, options = {}) {
         behavior: 'instant',
       }),
     );
-    const cardRect = await card.boundingBox();
-    await page.mouse.move(cardRect.x + cardRect.width - 100, cardRect.y + 40);
-    await page.waitForFunction(() => {
-      const cat = document.querySelector('[data-cat-sidekick]');
-      return (
-        cat?.dataset.surface === 'card' &&
-        window.__catStates.includes('jumping') &&
-        cat.dataset.state !== 'jumping' &&
-        cat.dataset.state !== 'crouching'
-      );
-    });
-    const landed = await sprite.boundingBox();
-    const surfaces = await page
-      .locator('[data-app-card]')
-      .evaluateAll((cards) =>
-        cards.map((node) => {
-          const rect = node.getBoundingClientRect();
-          return { x: rect.x, top: rect.top, right: rect.right };
-        }),
-      );
-    assert.ok(
-      surfaces.some(
-        (rect) =>
-          Math.abs(landed.y + landed.height - rect.top) < 8 &&
-          landed.x >= rect.x - 5 &&
-          landed.x + landed.width <= rect.right + 5,
-      ),
-      'cat paws land on an actual card edge',
+    await page.waitForTimeout(700);
+    const afterScroll = await documentPosition(page);
+    assert.equal(
+      afterScroll.surface,
+      'portrait',
+      'scroll alone does not select a project habitat',
     );
     assert.ok(
-      landed.x >= 0 && landed.x + landed.width <= 1440 && landed.y >= 90,
-      'cat stays below the header and within the viewport',
+      Math.abs(beforeScroll.x - afterScroll.x) < 1 &&
+        Math.abs(beforeScroll.y - afterScroll.y) < 1,
+      'document position stays fixed while the page scrolls',
+    );
+    const cardRect = await card.boundingBox();
+    await page.mouse.move(cardRect.x + cardRect.width / 2, cardRect.y + 90);
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-cat-sprite]')?.dataset.surface === 'card',
+    );
+    await settled(page);
+    await sprite.waitFor({ state: 'visible' });
+    assert.ok(
+      await noControlCollision(
+        page,
+        'h1,h2,.filters button,.project-toolbar .tiny-note,.project-body',
+      ),
+      'project companion leaves headings, filters and task links clear',
+    );
+    const landed = await sprite.boundingBox();
+    assert.ok(
+      landed.x >= 0 && landed.x + landed.width <= 1440,
+      'project cat remains within the page width',
     );
     assert.ok(
       await sprite.evaluate((node) => {
@@ -152,44 +212,75 @@ async function isolatedContext(browser, options = {}) {
           .elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)
           ?.closest('[data-cat-sprite]');
       }),
-      'cat art cannot intercept the pointer',
+      'decorative cat never captures project clicks',
+    );
+    await page.screenshot({ path: '/tmp/cat-v2-projects.png' });
+
+    const petBefore = await pose(page, ['.cat-head', '.cat-ear-left']);
+    await page
+      .getByRole('button', { name: 'Pet the cat', exact: true })
+      .click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-cat-sprite]')?.dataset.state ===
+        'petting',
+    );
+    await expectPoseChange(
+      page,
+      ['.cat-head', '.cat-ear-left'],
+      petBefore,
+      'petting moves the head/ear rig',
+    );
+    const playBefore = await pose(page, ['.cat-body', '.cat-left-paw']);
+    await page
+      .getByRole('button', { name: 'Play with the cat', exact: true })
+      .click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-cat-sprite]')?.dataset.state ===
+        'playing',
+    );
+    await expectPoseChange(
+      page,
+      ['.cat-body', '.cat-left-paw'],
+      playBefore,
+      'playing animates the body/paw rig',
+    );
+    await page
+      .getByRole('button', { name: 'Let the cat nap', exact: true })
+      .click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-cat-sprite]')?.dataset.state ===
+        'sleeping',
     );
     assert.ok(
-      await sprite.evaluate((node) => {
-        const cat = node.getBoundingClientRect();
-        return ![
-          ...document.querySelectorAll(
-            'h1,h2,.filters button,.project-toolbar .tiny-note',
-          ),
-        ].some((control) => {
-          const rect = control.getBoundingClientRect();
-          return (
-            cat.left < rect.right &&
-            cat.right > rect.left &&
-            cat.top < rect.bottom &&
-            cat.bottom > rect.top
-          );
-        });
-      }),
-      'perched cat does not cover headings or project filters',
+      await sprite
+        .locator('.sleep-eyes')
+        .evaluate(
+          (node) =>
+            getComputedStyle(node).display !== 'none' &&
+            Number(getComputedStyle(node).opacity) > 0,
+        ),
+      'nap closes the illustrated eyes',
     );
-    await page.screenshot({ path: '/tmp/cat-sidekick-desktop.png' });
 
     await page.getByRole('button', { name: 'Cat: pause', exact: true }).click();
     await page.waitForFunction(
       () =>
-        document.querySelector('[data-cat-sidekick]')?.dataset.state ===
-        'paused',
+        document.querySelector('[data-cat-sprite]')?.dataset.state === 'paused',
     );
-    await page.waitForTimeout(800); // Let the button's automatic scroll settle before measuring.
-    const paused = await sprite.boundingBox();
-    await page.mouse.move(100, 200);
-    await page.waitForTimeout(900);
-    const stillPaused = await sprite.boundingBox();
-    assert.ok(
-      Math.abs(paused.x - stillPaused.x) < 1 &&
-        Math.abs(paused.y - stillPaused.y) < 1,
-      'paused cat stays put',
+    const pausedPose = await pose(page, [
+      '.cat-body',
+      '.cat-head',
+      '.cat-tail',
+    ]);
+    await page.mouse.move(400, 100);
+    await page.waitForTimeout(500);
+    assert.deepEqual(
+      await pose(page, ['.cat-body', '.cat-head', '.cat-tail']),
+      pausedPose,
+      'pause freezes all rig motion',
     );
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page
@@ -200,14 +291,20 @@ async function isolatedContext(browser, options = {}) {
       .getByRole('button', { name: 'Cat: pause', exact: true })
       .waitFor();
 
-    // Form fields and card links remain normal DOM controls.
+    // Check local modal behavior without authenticating or contacting auth.
+    await page.keyboard.press('Meta+Period');
+    await page.locator('dialog[open]').waitFor();
+    await sprite.waitFor({ state: 'hidden' });
+    await page
+      .getByRole('button', { name: 'Close sign-in', exact: true })
+      .click();
     await page.getByLabel('Your name', { exact: true }).fill('Cat test');
     await page
       .getByLabel('Email address', { exact: true })
       .fill('cat-test@example.com');
     await page
       .getByLabel('What are we building?', { exact: true })
-      .fill('A little animation, no message will be sent.');
+      .fill('Animation test only; this contact message is never submitted.');
     assert.equal(
       await page.getByLabel('Your name', { exact: true }).inputValue(),
       'Cat test',
@@ -226,147 +323,128 @@ async function isolatedContext(browser, options = {}) {
             ?.closest('a') === node
         );
       }),
-      'project links remain clickable',
+      'project links remain normally clickable',
     );
+    assert.deepEqual(page.__errors, [], 'desktop has no uncaught page errors');
     await desktop.close();
 
     const reduced = await isolatedContext(browser, {
       viewport: { width: 1440, height: 1000 },
       reducedMotion: 'reduce',
     });
-    const quietPage = await reduced.newPage();
-    await quietPage.goto('https://giorgi.app/', {
-      waitUntil: 'domcontentloaded',
-    });
+    const quietPage = await start(reduced);
     await quietPage.waitForFunction(
       () =>
-        document.querySelector('[data-cat-sidekick]')?.dataset.motion ===
+        document.querySelector('[data-cat-sprite]')?.dataset.motion ===
         'reduced',
     );
-    const quietSprite = quietPage.locator('[data-cat-sprite]');
-    await quietPage.waitForTimeout(1200); // The route mounts after the root component; wait for its one initial anchor.
-    const quietBefore = await quietSprite.boundingBox();
+    const quietPose = await pose(quietPage, [
+      '.cat-body',
+      '.cat-head',
+      '.cat-tail',
+      '.cat-left-paw',
+    ]);
     await quietPage.mouse.move(300, 250);
     await quietPage.mouse.move(1300, 250);
-    await quietPage.waitForTimeout(1000);
+    await quietPage
+      .getByRole('button', { name: 'Play with the cat', exact: true })
+      .click();
+    await quietPage.waitForTimeout(700);
     assert.deepEqual(
-      await quietSprite.boundingBox(),
-      quietBefore,
-      'reduced-motion cat does not chase the pointer',
+      await pose(quietPage, [
+        '.cat-body',
+        '.cat-head',
+        '.cat-tail',
+        '.cat-left-paw',
+      ]),
+      quietPose,
+      'reduced motion prevents automatic and requested animated sequences',
     );
     assert.equal(
-      await quietSprite.evaluate((node) =>
-        [...node.querySelectorAll('*')].some(
-          (child) => getComputedStyle(child).animationName !== 'none',
+      await quietPage
+        .locator('[data-cat-sprite]')
+        .evaluate((node) =>
+          [...node.querySelectorAll('*')].some(
+            (child) => getComputedStyle(child).animationName !== 'none',
+          ),
         ),
-      ),
       false,
-      'reduced motion disables decorative keyframes',
     );
+    assert.deepEqual(quietPage.__errors, []);
     await reduced.close();
 
-    const mobile = await isolatedContext(browser, {
-      viewport: { width: 390, height: 844 },
-      isMobile: true,
-      hasTouch: true,
-      deviceScaleFactor: 1,
-    });
-    const mobilePage = await mobile.newPage();
-    await mobilePage.goto('https://giorgi.app/', {
-      waitUntil: 'domcontentloaded',
-    });
-    await mobilePage.waitForFunction(
-      () =>
-        document.querySelector('[data-cat-sidekick]')?.dataset.motion ===
-        'touch',
-    );
-    const mobileSprite = mobilePage.locator('[data-cat-sprite]');
-    await mobilePage.waitForTimeout(1200); // Wait for routed page layout and the initial perch to settle.
-    if (!(await mobileSprite.isVisible())) {
-      await mobilePage
+    for (const reducedMotion of ['no-preference', 'reduce']) {
+      const mobile = await isolatedContext(browser, {
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 1,
+        reducedMotion,
+      });
+      const mobilePage = await start(mobile);
+      await mobilePage.locator('.portrait-scene').evaluate((node) =>
+        window.scrollTo({
+          top: scrollY + node.getBoundingClientRect().top - 140,
+          behavior: 'instant',
+        }),
+      );
+      await settled(mobilePage);
+      const mobileSprite = mobilePage.locator('[data-cat-sprite]');
+      assert.ok(
+        await noControlCollision(
+          mobilePage,
+          '.cat-label,.human-stamp,.portrait-label,.hero-footnote,.site-header',
+        ),
+        'mobile portrait labels remain clear',
+      );
+      const phoneCat = await mobileSprite.boundingBox();
+      const phonePortrait = await mobilePage
         .locator('.portrait-scene')
-        .evaluate((node) =>
+        .boundingBox();
+      assert.ok(
+        phoneCat.y >= phonePortrait.y - 2 &&
+          phoneCat.y + phoneCat.height <=
+            phonePortrait.y + phonePortrait.height + 2,
+        'mobile cat stays within the portrait rather than hiding above it',
+      );
+      await assertNoOverflow(mobilePage);
+      if (reducedMotion === 'no-preference') {
+        const mobilePose = await pose(mobilePage, [
+          '.cat-head',
+          '.cat-left-paw',
+        ]);
+        await mobilePage
+          .getByRole('button', { name: 'Pet the cat', exact: true })
+          .tap();
+        await mobilePage.waitForFunction(
+          () =>
+            document.querySelector('[data-cat-sprite]')?.dataset.state ===
+            'petting',
+        );
+        await expectPoseChange(
+          mobilePage,
+          ['.cat-head', '.cat-left-paw'],
+          mobilePose,
+          'touch controls animate an explicit pet interaction',
+        );
+        await mobilePage.locator('.portrait-scene').evaluate((node) =>
           window.scrollTo({
-            top: scrollY + node.getBoundingClientRect().top - 180,
+            top: scrollY + node.getBoundingClientRect().top - 140,
             behavior: 'instant',
           }),
         );
-      await mobileSprite.waitFor({ state: 'visible' });
-      await mobilePage.waitForTimeout(900);
-    }
-    await mobilePage.screenshot({ path: '/tmp/cat-sidekick-mobile.png' });
-    const mobileBefore = await mobileSprite.boundingBox();
-    await mobilePage.touchscreen.tap(180, 240);
-    await mobilePage.waitForTimeout(1000);
-    assert.deepEqual(
-      await mobileSprite.boundingBox(),
-      mobileBefore,
-      'touch visits have no cursor chasing',
-    );
-    assert.ok(
-      await mobilePage.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-      'cat creates no horizontal overflow',
-    );
-    const mobileRect = await mobileSprite.boundingBox();
-    assert.ok(
-      mobileRect.x >= 0 &&
-        mobileRect.x + mobileRect.width <= 390 &&
-        mobileRect.y >= 78,
-      'mobile cat stays inside safe viewport',
-    );
-    await mobilePage.screenshot({ path: '/tmp/cat-sidekick-mobile.png' });
-    await mobile.close();
-    const quietMobile = await isolatedContext(browser, {
-      viewport: { width: 390, height: 844 },
-      isMobile: true,
-      hasTouch: true,
-      reducedMotion: 'reduce',
-    });
-    const quietMobilePage = await quietMobile.newPage();
-    await quietMobilePage.goto('https://giorgi.app/', {
-      waitUntil: 'domcontentloaded',
-    });
-    await quietMobilePage.waitForFunction(
-      () =>
-        document.querySelector('[data-cat-sidekick]')?.dataset.motion ===
-        'reduced',
-    );
-    await quietMobilePage.waitForTimeout(1200);
-    const quietMobileSprite = quietMobilePage.locator('[data-cat-sprite]');
-    if (!(await quietMobileSprite.isVisible())) {
-      await quietMobilePage
-        .locator('.portrait-scene')
-        .evaluate((node) =>
-          window.scrollTo({
-            top: scrollY + node.getBoundingClientRect().top - 180,
-            behavior: 'instant',
-          }),
+        await mobilePage.waitForFunction(
+          () =>
+            document.querySelector('[data-cat-sprite]')?.dataset.state !==
+            'petting',
         );
-      await quietMobileSprite.waitFor({ state: 'visible' });
-      await quietMobilePage.waitForTimeout(900);
+        await mobilePage.screenshot({ path: '/tmp/cat-v2-mobile.png' });
+      }
+      assert.deepEqual(mobilePage.__errors, []);
+      await mobile.close();
     }
-    const quietMobileRect = await quietMobileSprite.boundingBox();
-    assert.equal(
-      quietMobileRect.width,
-      86,
-      'touch + reduced-motion keeps compact geometry',
-    );
-    assert.equal(quietMobileRect.height, 95);
-    assert.ok(
-      quietMobileRect.x >= 0 &&
-        quietMobileRect.x + quietMobileRect.width <= 390 &&
-        quietMobileRect.y >= 78,
-    );
-    assert.ok(
-      await quietMobilePage.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    );
-    await quietMobile.close();
     console.log(
-      'PASS cartoon cat: pointer tracking, crouch/pounce, real card landing, click-through art, pause persistence, usable forms/links, reduced motion and touch layout.',
+      'PASS illustrated GSAP cat: head/eye rig, document anchoring, deliberate project habitat, pet/play/nap sequences, pause persistence, forms/modal/links, reduced motion and mobile controls.',
     );
   } finally {
     await browser.close();

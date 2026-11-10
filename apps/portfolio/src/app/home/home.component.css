@@ -4,3 +4,8 @@
 /* Visual tokens and the page composition live in portfolio-theme.css. */
 
 .developer-preview{width:100%;height:100%;object-fit:cover;display:block;border-radius:14px}
+
+/* Leave room for the cat's activity buttons below the portrait on phones. */
+@media (max-width: 650px) {
+  .hero { padding-bottom: 54px; }
+}

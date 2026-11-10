@@ -4,7 +4,7 @@
   data-cat-sidekick
   data-cat-sprite
   data-state="resting"
-  data-surface="dock"
+  data-surface="portrait"
   data-motion="full"
   aria-hidden="true"
 >
@@ -14,120 +14,440 @@
   >
   <svg
     class="cat-drawing"
-    viewBox="0 0 140 154"
+    viewBox="0 0 220 250"
     xmlns="http://www.w3.org/2000/svg"
   >
+    <defs>
+      <linearGradient id="gcat-v2-ivory" x1="0" y1="0" x2=".85" y2="1">
+        <stop offset="0" stop-color="#fffef9" />
+        <stop offset=".52" stop-color="#f4f1e8" />
+        <stop offset="1" stop-color="#c9c7ba" />
+      </linearGradient>
+      <linearGradient id="gcat-v2-chest" x1="0" y1="0" x2="1" y2=".7">
+        <stop offset="0" stop-color="#fffdf4" />
+        <stop offset=".55" stop-color="#eee9dc" />
+        <stop offset="1" stop-color="#b9b8ae" />
+      </linearGradient>
+      <linearGradient id="gcat-v2-charcoal" x1="0" y1="0" x2=".8" y2="1">
+        <stop offset="0" stop-color="#797970" />
+        <stop offset=".3" stop-color="#4d514c" />
+        <stop offset="1" stop-color="#252b29" />
+      </linearGradient>
+      <linearGradient id="gcat-v2-ear" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e8b4a2" />
+        <stop offset=".6" stop-color="#cb8d7c" />
+        <stop offset="1" stop-color="#955f56" />
+      </linearGradient>
+      <radialGradient id="gcat-v2-amber" cx=".4" cy=".35" r=".7">
+        <stop offset="0" stop-color="#e8d2a0" />
+        <stop offset=".58" stop-color="#b99555" />
+        <stop offset=".86" stop-color="#816039" />
+        <stop offset="1" stop-color="#4e4937" />
+      </radialGradient>
+      <radialGradient id="gcat-v2-muzzle" cx=".4" cy=".3" r=".8">
+        <stop offset="0" stop-color="#fffef9" />
+        <stop offset="1" stop-color="#ddd8c9" />
+      </radialGradient>
+      <clipPath id="gcat-v2-eye-left">
+        <path d="M65 95C67 79 89 78 99 92C98 111 73 114 65 95Z" />
+      </clipPath>
+      <clipPath id="gcat-v2-eye-right">
+        <path d="M122 92C132 78 154 79 157 95C150 114 126 111 122 92Z" />
+      </clipPath>
+    </defs>
     <ellipse
       class="cat-shadow"
-      cx="72"
-      cy="150"
-      rx="44"
-      ry="3"
-      fill="#26352d"
-      opacity=".13"
+      cx="111"
+      cy="245"
+      rx="68"
+      ry="4"
+      fill="#3b4035"
+      opacity=".16"
     />
-    <g
-      class="cat-body"
-      stroke="#27352e"
-      stroke-width="2.6"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <g class="cat-tail" fill="none">
+    <g class="cat-tail" stroke-linecap="round" stroke-linejoin="round">
+      <path
+        d="M147 222C185 239 215 218 209 192C207 183 201 177 194 175"
+        fill="none"
+        stroke="#303a32"
+        stroke-width="23"
+      />
+      <path
+        d="M147 221C183 235 210 217 204 193C202 185 199 182 193 180"
+        fill="none"
+        stroke="url(#gcat-v2-charcoal)"
+        stroke-width="17"
+      />
+      <path
+        d="M175 226L179 235M192 216L199 224M196 198L207 196"
+        fill="none"
+        stroke="#202925"
+        stroke-width="6"
+        opacity=".65"
+      />
+      <path
+        d="M157 222Q175 227 187 220"
+        fill="none"
+        stroke="#a7aaa0"
+        stroke-width="1.2"
+        opacity=".65"
+      />
+      <g class="cat-tail-tip">
         <path
-          d="M91 131C125 137 141 111 128 88C121 76 115 84 119 93"
+          d="M194 180C188 177 182 180 180 173C179 165 186 159 193 162C200 165 201 173 198 181"
+          fill="none"
+          stroke="#303a32"
           stroke-width="17"
         />
         <path
-          d="M91 131C125 137 141 111 128 88C121 76 115 84 119 93"
-          stroke="#424841"
+          d="M194 180C188 177 182 180 180 173C179 166 186 162 192 165"
+          fill="none"
+          stroke="#f2f0e6"
           stroke-width="11"
         />
-        <path d="M126 85Q115 77 119 93" stroke="#fffdf5" stroke-width="10" />
+        <path
+          d="M183 166L185 163M180 172L177 171"
+          fill="none"
+          stroke="#fffdf7"
+          stroke-width="1.3"
+        />
+      </g>
+    </g>
+    <g
+      class="cat-body"
+      stroke="#4b5147"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M78 126C60 139 54 164 57 194L54 213C57 229 70 238 88 241L142 240C161 232 169 216 164 197C160 181 156 163 145 143L137 127Z"
+        fill="url(#gcat-v2-charcoal)"
+      />
+      <path
+        d="M62 175Q70 171 73 162M59 190Q68 185 74 175M151 164L161 177M155 180L165 191M61 208Q68 201 76 204"
+        fill="none"
+        stroke="#222d28"
+        stroke-width="6"
+        opacity=".65"
+      />
+      <path
+        d="M61 160L64 153M58 180L61 174M162 190L165 196M163 208L166 215"
+        fill="none"
+        stroke="#a0a196"
+        stroke-width="1"
+      />
+      <g class="cat-chest">
+        <path
+          d="M86 116L78 133L71 143L77 144L70 155L77 153L72 169L79 167L77 182L84 179L82 195Q108 212 138 193L143 180L148 182L142 165L148 168L141 152L147 153L139 139L142 137L132 120Z"
+          fill="url(#gcat-v2-chest)"
+        />
+        <path
+          d="M86 131L83 145M93 132L90 146M102 135L102 148M111 135L116 147M126 132L132 144M83 155L81 167M92 156L91 174M104 154L105 172M118 156L122 170M132 153L139 164M87 178L86 189M98 180L100 193M113 178L117 191M128 177L133 188"
+          fill="none"
+          stroke="#fffef8"
+          stroke-width="1.1"
+          opacity=".85"
+        />
+        <path
+          d="M91 142L88 150M111 145L113 153M126 147L130 154M96 170L96 178M120 169L123 177"
+          fill="none"
+          stroke="#c1c0b2"
+          stroke-width=".9"
+          opacity=".6"
+        />
       </g>
       <path
-        d="M48 88C31 104 34 130 39 142Q71 151 102 141C108 120 102 99 88 87Z"
-        fill="#424841"
+        d="M67 207C48 211 44 231 55 240L83 241L91 228C89 216 80 210 67 207Z"
+        fill="url(#gcat-v2-charcoal)"
       />
       <path
-        d="M58 91Q74 101 85 91C90 106 94 128 87 145H54C49 127 49 107 58 91Z"
-        fill="#fffdf5"
+        d="M143 207C160 209 170 225 160 239L135 242L127 228C129 216 134 211 143 207Z"
+        fill="url(#gcat-v2-charcoal)"
       />
-      <path d="M41 131Q29 137 34 148H58Q61 135 50 133" fill="#424841" />
-      <path d="M91 131Q106 130 107 148H85Q81 137 91 131Z" fill="#424841" />
-      <g class="cat-face">
+      <path
+        d="M52 235Q64 229 76 234M141 232Q151 227 162 233"
+        fill="none"
+        stroke="#a3a396"
+        stroke-width="1"
+        opacity=".5"
+      />
+      <g class="cat-left-paw">
         <path
-          d="M35 62L31 23Q33 17 38 22L58 39Q74 34 90 39L109 20Q114 17 114 24L111 66C121 88 106 108 75 109C41 109 22 90 35 62Z"
-          fill="#fffdf5"
+          d="M82 159C76 177 77 199 78 218C76 225 72 232 75 242C81 249 94 247 101 244L100 220C99 201 104 181 102 166"
+          fill="url(#gcat-v2-ivory)"
         />
         <path
-          d="M35 63L31 23Q33 17 38 22L58 39Q65 37 70 38L60 62L48 79L33 77Q29 72 35 63Z"
-          fill="#424841"
+          d="M86 173L84 189M88 193L86 210M87 217L85 229M95 182L94 196"
+          fill="none"
+          stroke="#fffefa"
+          stroke-width="1.2"
         />
         <path
-          d="M78 38L90 39L109 20Q114 17 114 24L111 66Q116 75 114 81L96 76L86 62Z"
-          fill="#424841"
+          d="M79 236Q82 238 81 245M87 236Q91 238 89 246M95 236L96 245"
+          fill="none"
+          stroke="#abae9f"
+          stroke-width="1.1"
         />
-        <path d="M38 32L42 54L53 44Z" fill="#db9f9a" stroke-width="1.6" />
-        <path d="M106 31L95 44L107 55Z" fill="#db9f9a" stroke-width="1.6" />
-        <path d="M67 44L58 70Q70 77 85 69L77 44" fill="#fffdf5" stroke="none" />
-        <g class="awake-eyes">
-          <ellipse cx="51" cy="75" rx="12" ry="13" fill="#ced88d" />
-          <ellipse cx="94" cy="75" rx="12" ry="13" fill="#ced88d" />
-          <g class="cat-pupil" stroke="none" fill="#27352e">
-            <ellipse cx="52" cy="76" rx="5" ry="8" />
-            <ellipse cx="93" cy="76" rx="5" ry="8" />
-            <circle cx="54" cy="72" r="2.3" fill="#fffdf5" />
-            <circle cx="95" cy="72" r="2.3" fill="#fffdf5" />
-          </g>
+        <path
+          d="M80 222L82 226M97 223L95 228"
+          fill="none"
+          stroke="#d0cec0"
+          stroke-width="1"
+        />
+      </g>
+      <g class="cat-right-paw">
+        <path
+          d="M119 164C115 184 119 204 119 221L117 240C122 249 137 248 144 242C147 235 140 226 138 219C137 198 140 176 133 160"
+          fill="url(#gcat-v2-ivory)"
+        />
+        <path
+          d="M125 174L126 190M129 196L129 211M128 218L130 231M135 179L135 194"
+          fill="none"
+          stroke="#fffefa"
+          stroke-width="1.2"
+        />
+        <path
+          d="M123 236L123 245M130 236Q134 240 132 246M138 234Q142 238 139 244"
+          fill="none"
+          stroke="#abae9f"
+          stroke-width="1.1"
+        />
+      </g>
+      <g class="cat-head cat-face">
+        <g class="cat-ear-left">
+          <path
+            d="M58 78C51 65 43 34 47 18C49 11 56 17 63 25L86 56Z"
+            fill="url(#gcat-v2-charcoal)"
+          />
+          <path
+            d="M57 65C53 54 48 29 51 24C54 23 67 40 75 57Z"
+            fill="url(#gcat-v2-ear)"
+            stroke="#9c8370"
+            stroke-width="1"
+          />
+          <path
+            d="M53 30L59 48L56 46M57 39L65 55L62 53M60 36L70 52M50 25L54 28"
+            fill="none"
+            stroke="#f1d6bf"
+            stroke-width="1.1"
+            opacity=".9"
+          />
+          <path
+            d="M48 19L44 13M48 25L44 21M51 18L50 12"
+            fill="none"
+            stroke="#d9d7c8"
+            stroke-width=".9"
+          />
+        </g>
+        <g class="cat-ear-right">
+          <path
+            d="M132 56L158 23C165 15 171 11 172 21C173 39 166 62 159 79Z"
+            fill="url(#gcat-v2-charcoal)"
+          />
+          <path
+            d="M143 57L166 25C170 28 162 55 155 65Z"
+            fill="url(#gcat-v2-ear)"
+            stroke="#9c8370"
+            stroke-width="1"
+          />
+          <path
+            d="M164 30L155 49L159 46M159 35L150 55L154 51M168 25L165 29M168 36L160 55"
+            fill="none"
+            stroke="#f1d6bf"
+            stroke-width="1.1"
+            opacity=".9"
+          />
+          <path
+            d="M169 16L172 12M172 24L175 20M166 20L165 15"
+            fill="none"
+            stroke="#d9d7c8"
+            stroke-width=".9"
+          />
         </g>
         <path
-          class="sleep-eyes"
-          d="M41 77Q51 86 61 77M84 77Q94 86 104 77"
-          fill="none"
+          d="M62 63L66 57L66 53L75 54L77 49L86 52L89 47L97 50L104 46L111 50L118 46L126 51L134 48L141 55L147 54L151 62C160 70 165 80 165 94L169 104L164 104L169 112L162 112L166 120L158 120C147 139 128 148 109 147C87 147 68 138 58 121L51 122L54 114L48 115L54 104L49 103L54 94C53 81 56 71 62 63Z"
+          fill="url(#gcat-v2-ivory)"
         />
-        <ellipse
-          cx="49"
-          cy="92"
-          rx="7"
-          ry="3"
-          fill="#e5b4a5"
-          stroke="none"
-          opacity=".55"
-        />
-        <ellipse
-          cx="96"
-          cy="92"
-          rx="7"
-          ry="3"
-          fill="#e5b4a5"
-          stroke="none"
-          opacity=".55"
-        />
-        <path d="M67 88Q73 85 79 88L73 94Z" fill="#d39a93" stroke-width="1.7" />
         <path
-          d="M73 94V97M73 97Q68 102 63 97M73 97Q78 102 83 97"
+          d="M61 64L66 56L75 56L79 51L88 54L93 49L103 52L103 71L95 83L85 92L77 107L61 111L53 103L57 92C56 81 56 72 61 64Z"
+          fill="url(#gcat-v2-charcoal)"
+          stroke="none"
+        />
+        <path
+          d="M116 51L126 52L134 50L141 57L147 57L153 66C161 75 164 85 162 94L168 105L159 111L146 106L138 92L124 85L117 71Z"
+          fill="url(#gcat-v2-charcoal)"
+          stroke="none"
+        />
+        <path
+          d="M72 65L88 70M69 76L82 79M68 86L78 88M64 105L74 106M137 66L150 62M141 75L156 70M145 83L160 80M149 105L159 100"
           fill="none"
+          stroke="#202925"
+          stroke-width="4.2"
+          opacity=".7"
+        />
+        <path
+          d="M88 58L94 65L93 73M127 57L123 65L125 73"
+          fill="none"
+          stroke="#929286"
+          stroke-width="1.2"
+          opacity=".8"
+        />
+        <path
+          d="M108 53L101 75L99 91L104 110L114 110L119 91L115 73Z"
+          fill="#fffdf7"
+          stroke="none"
+        />
+        <path
+          d="M104 59L103 68M110 56L110 65M113 66L114 75M106 78L104 90M113 82L115 95"
+          fill="none"
+          stroke="#d8d7ca"
+          stroke-width=".85"
+        />
+        <path
+          d="M63 79Q77 71 93 79M128 79Q143 72 158 80"
+          fill="none"
+          stroke="#f2eee2"
           stroke-width="1.8"
         />
-        <g fill="none" stroke-width="1.5">
-          <path d="M44 91L22 86M43 97L20 99M102 91L125 86M103 97L127 100" />
+        <g class="cat-eyes awake-eyes" stroke="#333b30" stroke-width="1.4">
+          <path
+            d="M65 95C67 79 89 78 99 92C98 111 73 114 65 95Z"
+            fill="url(#gcat-v2-amber)"
+          />
+          <path
+            d="M122 92C132 78 154 79 157 95C150 114 126 111 122 92Z"
+            fill="url(#gcat-v2-amber)"
+          />
+          <path
+            d="M70 96L73 90M75 101L78 89M82 104L82 88M89 101L87 89M94 96L91 91M128 95L132 89M134 102L137 87M142 104L142 88M149 100L147 90"
+            fill="none"
+            stroke="#e5cd93"
+            stroke-width=".8"
+            opacity=".65"
+          />
+          <g class="cat-pupil" stroke="none">
+            <g clip-path="url(#gcat-v2-eye-left)">
+              <ellipse cx="82" cy="95" rx="7" ry="11" fill="#202a24" />
+              <ellipse cx="80" cy="91" rx="2.7" ry="3.5" fill="#fffef8" />
+              <circle cx="86" cy="100" r="1.2" fill="#eee7d0" opacity=".8" />
+            </g>
+            <g clip-path="url(#gcat-v2-eye-right)">
+              <ellipse cx="139" cy="95" rx="7" ry="11" fill="#202a24" />
+              <ellipse cx="137" cy="91" rx="2.7" ry="3.5" fill="#fffef8" />
+              <circle cx="143" cy="100" r="1.2" fill="#eee7d0" opacity=".8" />
+            </g>
+          </g>
+          <path
+            d="M65 95C67 79 89 78 99 92M122 92C132 78 154 79 157 95"
+            fill="none"
+            stroke="#28312b"
+            stroke-width="2.1"
+          />
         </g>
-      </g>
-      <g class="cat-paws" fill="#fffdf5">
-        <path class="cat-left-paw" d="M56 118L53 140Q47 143 50 151H68L69 123" />
+        <g
+          class="cat-eyelids sleep-eyes"
+          fill="none"
+          stroke="#465045"
+          stroke-width="1.8"
+        >
+          <path d="M67 96Q82 106 97 94M124 94Q140 106 154 97" />
+        </g>
         <path
-          class="cat-right-paw"
-          d="M79 123L80 151H98Q101 143 92 140L89 117"
+          d="M61 111Q74 105 88 113M132 113Q148 105 161 111"
+          fill="none"
+          stroke="#e7e4d7"
+          stroke-width="4"
         />
-        <g stroke-width="1.4">
-          <path d="M56 146V151M61 146V151M85 146V151M90 146V151" />
+        <path
+          d="M63 114L57 116M66 118L59 120M72 124L66 128M150 115L159 116M147 121L155 123M143 127L149 131"
+          fill="none"
+          stroke="#fffdf7"
+          stroke-width="1.1"
+        />
+        <g class="cat-jaw">
+          <path
+            d="M92 126Q108 120 125 126L127 138Q109 151 91 138Z"
+            fill="url(#gcat-v2-muzzle)"
+            stroke="#b8b9ab"
+            stroke-width="1"
+          />
+          <path
+            class="cat-mouth"
+            d="M101 134Q109 131 117 134Q115 144 109 145Q102 143 101 134Z"
+            fill="#684b45"
+            stroke="none"
+          />
+          <path
+            class="cat-tongue"
+            d="M104 138Q109 134 114 138L114 144Q109 148 104 144Z"
+            fill="#d69287"
+            stroke="#aa726a"
+            stroke-width=".6"
+          />
+          <path
+            d="M102 139Q109 143 116 139"
+            fill="none"
+            stroke="#f5f1e5"
+            stroke-width="1.6"
+          />
+        </g>
+        <ellipse
+          cx="97"
+          cy="122"
+          rx="15"
+          ry="9"
+          fill="url(#gcat-v2-muzzle)"
+          stroke="none"
+        />
+        <ellipse
+          cx="121"
+          cy="122"
+          rx="15"
+          ry="9"
+          fill="url(#gcat-v2-muzzle)"
+          stroke="none"
+        />
+        <path
+          d="M100 112Q109 108 118 112L115 117L109 122L103 117Z"
+          fill="#d09a8a"
+          stroke="#8d7165"
+          stroke-width="1"
+        />
+        <path
+          d="M103 113Q109 111 115 113"
+          fill="none"
+          stroke="#eac0aa"
+          stroke-width="1.3"
+        />
+        <path
+          d="M109 121V126M109 126Q102 132 96 126M109 126Q115 132 122 126"
+          fill="none"
+          stroke="#736f60"
+          stroke-width="1.1"
+        />
+        <g fill="#85877b" stroke="none" opacity=".7">
+          <circle cx="90" cy="119" r=".65" />
+          <circle cx="95" cy="116" r=".65" />
+          <circle cx="95" cy="123" r=".65" />
+          <circle cx="123" cy="116" r=".65" />
+          <circle cx="128" cy="120" r=".65" />
+          <circle cx="124" cy="124" r=".65" />
+        </g>
+        <g class="cat-whiskers" fill="none" stroke="#eee9d9" stroke-width="1.1">
+          <path
+            d="M89 120Q68 111 42 110M88 125Q62 120 38 126M90 130Q64 130 46 139M128 120Q151 110 178 111M130 125Q156 120 182 126M128 130Q153 130 174 140"
+          />
+        </g>
+        <g fill="none" stroke="#999d90" stroke-width=".65" opacity=".6">
+          <path
+            d="M82 115Q65 110 48 113M135 116Q154 111 172 114M84 134L77 140M91 139L87 144M132 135L139 140M125 140L129 144"
+          />
         </g>
       </g>
     </g>
   </svg>
 </div>
-<div class="cat-controls">
+<div #controls class="cat-controls">
   <span><span aria-hidden="true">✧</span> Chief Distraction Officer</span>
   <button
     type="button"
@@ -138,4 +458,23 @@
     Cat: {{ paused() ? 'play' : 'pause' }}
     <span aria-hidden="true">{{ paused() ? '▷' : 'Ⅱ' }}</span>
   </button>
+  <div class="cat-activities" role="group" aria-label="Cat activities">
+    <button type="button" aria-label="Pet the cat" (click)="action('pet')">
+      Pet <span aria-hidden="true">♡</span>
+    </button>
+    <button
+      type="button"
+      aria-label="Play with the cat"
+      (click)="action('play')"
+    >
+      Play <span aria-hidden="true">✧</span>
+    </button>
+    <button
+      type="button"
+      aria-label="Let the cat nap"
+      (click)="action('sleep')"
+    >
+      Nap <span aria-hidden="true">z</span>
+    </button>
+  </div>
 </div>
