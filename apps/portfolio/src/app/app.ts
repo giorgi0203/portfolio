@@ -1,4 +1,5 @@
 import { DomSanitizer } from '@angular/platform-browser';
+import { GoogleAnalyticsService } from './services/google-analytics.service';
 import { AnalyticsService } from './services/analytics.service';
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
@@ -26,7 +27,8 @@ export class App implements OnInit, OnDestroy {
   closeOwnerLogin(){this.ownerLoginClosed();this.ownerDialog.nativeElement.close();}
   ngOnDestroy(){clearTimeout(this.identityTimer);window.removeEventListener('keydown',this.shortcut);window.removeEventListener('message',this.identityMessage);}
 
+  readonly googleAnalytics=inject(GoogleAnalyticsService);
   private readonly analytics=inject(AnalyticsService);
-  ngOnInit(){this.analytics.start();window.addEventListener('keydown',this.shortcut);window.addEventListener('message',this.identityMessage);}
+  ngOnInit(){this.analytics.start();void this.googleAnalytics.start();window.addEventListener('keydown',this.shortcut);window.addEventListener('message',this.identityMessage);}
   readonly deployedApps = deployedApps;
 }

@@ -98,3 +98,11 @@
   }
   <p><a href="https://auth.giorgi.app/?continue=/analytics">Open sign-in in a full page</a></p>
 </dialog>
+
+<div class="privacy-links"><a href="/privacy.html">Privacy</a>@if(googleAnalytics.available()){<button type="button" (click)="googleAnalytics.settings()">Analytics settings</button>}</div>
+@if(googleAnalytics.showChoice()){
+ <section class="analytics-choice" role="region" aria-label="Optional Google Analytics">
+  <strong>Help me understand what’s useful?</strong><p>With your permission, Google Analytics measures visits and app-link clicks using cookies. The site also keeps cookie-free aggregate counts. Form contents are excluded. <a href="/privacy.html">Privacy details</a></p>
+  <div><button type="button" (click)="googleAnalytics.choose('deny')">No thanks</button><button type="button" (click)="googleAnalytics.choose('allow')">Allow Google Analytics</button></div>
+ </section>
+}
