@@ -1,0 +1,59 @@
+name: Deploy Learning Lab compiler inspector
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/learning-lab-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-learning-lab-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 3m
+          script: |
+            set -eu
+            stage=/var/tmp/giorgi-learning-${{ github.sha }}
+            mkdir -p "$stage"
+            trap 'rm -rf -- "$stage"' EXIT
+            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/12b2b75028fdb5ef6096a54a378a7eccd60d9059/learning-lab-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '5057487efb5b732184e117f5288eef4f79f69145073812303d9ae8092150da20' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n bash "$stage/deploy/install-learning-lab.sh" "$stage" 9f4735da84f623fb7e38223bdf2d15c249ed289d
+  browser:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [inspector, lessons]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9f4735da84f623fb7e38223bdf2d15c249ed289d
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Exercise real source mapping, compiler output and existing lessons
+        env:
+          LAB_URL: https://angular-compiler.giorgi.app/
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/browser/node_modules/playwright"
+          if [ '${{ matrix.suite }}' = inspector ]; then
+            node scripts/learning-inspector-browser.cjs
+          else
+            node scripts/learning-browser.cjs
+          fi
