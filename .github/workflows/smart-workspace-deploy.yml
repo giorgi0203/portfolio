@@ -30,15 +30,32 @@ jobs:
             set -eu
             test -n "$SMART_TODO_AI_KEY"
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            stage=/tmp/smart-workspace-4da8b20072a2ed34c68ae221b31b8042d16b21d2
+            stage=/tmp/smart-workspace-64f1cadf24a1b2becb1c327a650a72fd32454ecd
             sudo -n python3 - "$stage" <<'PYCLEAN'
             import pathlib,re,shutil,sys
             for p in pathlib.Path('/tmp').iterdir():
               if str(p)!=sys.argv[1] and re.fullmatch(r'smart-workspace-[a-f0-9]{40}',p.name) and p.is_dir() and not p.is_symlink() and (p/'bundle.tar.gz').is_file():shutil.rmtree(p)
             PYCLEAN
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/4da8b20072a2ed34c68ae221b31b8042d16b21d2/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'b3681e8994ecd0fae653695fd0b175af46037534cc08a17980b1d8c70b2c239a' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/64f1cadf24a1b2becb1c327a650a72fd32454ecd/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '6469e67cdae1c8a3f98c03ca6783ac41c67f277c0a68e5734299434356093590' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-shared-suite.sh" "$stage" af12bdd70b36aa768d971ef2d07fd51959cdc653
+            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-shared-suite.sh" "$stage" b0847c73de2eaf8ae8c46dad633d61d1027d3a14
             unset SMART_TODO_AI_KEY
+            sudo -n python3 - <<'PYHEADERS'
+            import urllib.request,json
+            with urllib.request.urlopen('https://auth.giorgi.app/embed',timeout=15) as response:
+              policies=response.headers.get_all('Content-Security-Policy',[])
+              assert policies and all("frame-ancestors 'none'" not in p for p in policies)
+              assert any('frame-ancestors https://giorgi.app https://www.giorgi.app' in p for p in policies)
+              assert not response.headers.get('X-Frame-Options')
+            req=urllib.request.Request('https://auth.giorgi.app/api/auth/session',headers={'Origin':'https://hls-player.giorgi.app'})
+            with urllib.request.urlopen(req,timeout=15) as response:
+              assert response.headers.get('Access-Control-Allow-Origin')=='https://hls-player.giorgi.app'
+              assert response.headers.get('Access-Control-Allow-Credentials')=='true'
+              assert json.load(response)['user'] is None
+            req=urllib.request.Request('https://auth.giorgi.app/api/analytics/event',method='OPTIONS',headers={'Origin':'https://hls-player.giorgi.app','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'Content-Type'})
+            with urllib.request.urlopen(req,timeout=15) as response:
+              assert response.status==204 and response.headers.get('Access-Control-Allow-Origin')=='https://hls-player.giorgi.app'
+            print('PASS live modal frame policy and HLS cross-origin account/analytics access')
+            PYHEADERS
