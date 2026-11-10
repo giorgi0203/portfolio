@@ -19,6 +19,14 @@ jobs:
           script: |
             set -eu
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            df -h /tmp
+            sudo -n python3 - <<'PYTEMP'
+            import pathlib,re,shutil
+            for p in pathlib.Path('/tmp').iterdir():
+              if re.fullmatch(r'smart-workspace-[a-f0-9]{40}',p.name) and p.is_dir() and not p.is_symlink() and (p/'bundle.tar.gz').is_file():
+                print('Removing generated deployment stage:',p.name)
+                shutil.rmtree(p)
+            PYTEMP
             free -m
             ps -eo pid,comm,rss --sort=-rss | head -12
             systemctl show giorgi-identity smart-todolist-web smart-todolist-agent -p Id -p NRestarts -p MemoryCurrent -p Result
