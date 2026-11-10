@@ -26,6 +26,7 @@ import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
     .editor-container {
       display: flex;
       flex-direction: column;
+      height: 100%;
       flex: 1;
       min-height: 0;
       border-bottom: 1px solid #3c3c3c;
@@ -65,7 +66,8 @@ import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
     }
     
     :host ::ng-deep .editor-wrapper ngx-monaco-editor {
-      height: 300px;
+      height: 100%;
+      display: block;
     }
     
     :host ::ng-deep .editor-wrapper .monaco-editor {

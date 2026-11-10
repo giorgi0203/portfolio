@@ -1,3 +1,2 @@
 @import "tailwindcss";
-
-/* You can add global styles to this file, and also import other style files */
+html{background:#edf1e6;color-scheme:light}body{margin:0;min-width:320px}*{box-sizing:border-box}

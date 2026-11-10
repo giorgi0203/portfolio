@@ -1,272 +1,39 @@
-<div class="min-h-screen bg-gray-900 text-white p-4">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-8">{{ title }}</h1>
+<main class="inspector">
+  <nav class="top-nav"><a href="https://giorgi.app/">← Giorgi’s apps</a><span class="pill">STREAMING WORKBENCH / 01</span></nav>
+  <header class="intro"><div><p class="eyebrow">LOOK UNDER THE PLAY BUTTON</p><h1>HLS <em>Inspector.</em></h1><p>Play a stream. See its renditions, requests, and buffer health.</p></div><div class="privacy-note"><span aria-hidden="true">↳</span><p>Streams load directly in your browser.<br>Your stream URL stays out of analytics and exported reports.</p></div></header>
+  <section class="source-card" aria-labelledby="source-heading">
+    <h2 id="source-heading">Bring your playlist</h2>
+    <form (ngSubmit)="changeVideoUrl(videoUrl)" class="source-form">
+      <label for="videoUrl">HLS stream URL</label>
+      <div class="url-row"><input id="videoUrl" name="stream" type="url" [(ngModel)]="videoUrl" placeholder="https://your-stream.example/master.m3u8" autocomplete="off" spellcheck="false" required/><button type="submit" class="primary">{{ isLoading ? 'Load another' : 'Inspect & load' }} <span aria-hidden="true">↗</span></button></div>
+    </form>
+    <div class="source-actions"><button type="button" class="text-button" (click)="changeVideoUrl(sampleUrl)">Try Big Buck Bunny sample ↗</button><span>Public sample availability depends on its host.</span><button type="button" class="text-button stop" (click)="stop()">Stop / cancel</button></div>
+    @if(isLoading){<p class="progress" role="status"><span class="spinner" aria-hidden="true"></span>Reading the playlist… requests time out automatically.</p>}
+    @if(inspectionWarning){<p class="helper" role="note">{{ inspectionWarning }}</p>}
+    @if(hasError){<div class="error-box" role="alert"><strong>Couldn’t finish that request.</strong><p>{{ errorMessage }}</p><button type="button" (click)="retry()" [disabled]="!videoUrl">Retry stream</button></div>}
+  </section>
 
-    <!-- Video URL Input -->
-    <div class="mb-6">
-      <label for="videoUrl" class="block text-sm font-medium mb-2">Video URL (HLS Stream)</label>
-      <div class="flex gap-2">
-        <input
-          #urlInput
-          type="url"
-          id="videoUrl"
-          [value]="videoUrl"
-          class="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter HLS stream URL"
-          />
-        <button
-          (click)="changeVideoUrl(urlInput.value)"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors"
-          >
-          Load
-        </button>
-      </div>
-
-      <!-- Preset URLs -->
-      <div class="mt-2">
-        <p class="text-sm text-gray-400 mb-2">Sample streams:</p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <button
-            (click)="changeVideoUrl('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Tears of Steel
-          </button>
-          <button
-            (click)="changeVideoUrl('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Big Buck Bunny
-          </button>
-          <button
-            (click)="changeVideoUrl('https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Sintel
-          </button>
-          <button
-            (click)="changeVideoUrl('https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Multi-Audio
-          </button>
-          <button
-            (click)="changeVideoUrl('https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Live Stream
-          </button>
-          <button
-            (click)="changeVideoUrl('https://d2zihajmogu5jn.cloudfront.net/bipbop-advanced/bipbop_16x9_variant.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Apple Test
-          </button>
-          <button
-            (click)="changeVideoUrl('https://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/master.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            Multi-Quality
-          </button>
-          <button
-            (click)="changeVideoUrl('https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8')"
-            class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
-            >
-            With Subtitles
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Video Player Container -->
-    <div class="relative bg-black rounded-lg overflow-hidden shadow-2xl">
-      <!-- Video Element -->
-      <video
-        #videoElement
-        class="w-full h-auto max-h-[70vh]"
-        [class.cursor-pointer]="!isLoading && !hasError"
-        (click)="togglePlay()"
-        preload="metadata"
-        crossorigin="anonymous"
-        >
-        Your browser does not support the video tag.
-      </video>
-
-      <!-- Loading Overlay -->
-      @if (isLoading) {
-        <div
-          class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75"
-          >
-          <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-            <p class="text-lg">Loading video...</p>
-          </div>
-        </div>
-      }
-
-      <!-- Error Overlay -->
-      @if (hasError) {
-        <div
-          class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75"
-          >
-          <div class="text-center text-red-500">
-            <div class="text-6xl mb-4">⚠️</div>
-            <h3 class="text-xl font-semibold mb-2">Error Loading Video</h3>
-            <p class="text-sm">{{ errorMessage }}</p>
-          </div>
-        </div>
-      }
-
-      <!-- Video Controls -->
-      @if (!isLoading && !hasError) {
-        <div
-          class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-4"
-          >
-          <!-- Progress Bar -->
-          <div class="mb-4">
-            <input
-              type="range"
-              min="0"
-              [max]="duration"
-              [value]="currentTime"
-              (input)="onSeek($event)"
-              class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-              />
-            <div class="flex justify-between text-xs text-gray-300 mt-1">
-              <span>{{ formatTime(currentTime) }}</span>
-              <span>{{ formatTime(duration) }}</span>
-            </div>
-          </div>
-          <!-- Control Buttons -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-              <!-- Play/Pause Button -->
-              <button
-                (click)="togglePlay()"
-                class="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-                >
-                <span class="text-xl">{{ isPlaying ? '⏸️' : '▶️' }}</span>
-              </button>
-              <!-- Volume Control -->
-              <div class="flex items-center space-x-2">
-                <button
-                  (click)="toggleMute()"
-                  class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
-                  >
-                  <span>{{ isMuted ? '🔇' : '🔊' }}</span>
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  [value]="volume"
-                  (input)="onVolumeChange($event)"
-                  class="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-                  />
-              </div>
-              <!-- Time Display -->
-              <div class="text-sm text-gray-300">
-                {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
-              </div>
-            </div>
-            <div class="flex items-center space-x-4">
-              <!-- Quality Selector -->
-              <div class="flex items-center space-x-2">
-                <label for="qualitySelect" class="text-sm text-gray-300">Quality:</label>
-                <select
-                  id="qualitySelect"
-                  [value]="selectedQuality"
-                  (change)="onQualityChange($event)"
-                  class="bg-gray-800 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                  <option value="-1">Auto</option>
-                  @for (quality of qualityLevels; track quality) {
-                    <option
-                      [value]="quality.index"
-                      >
-                      {{ quality.name }}
-                    </option>
-                  }
-                </select>
-              </div>
-              <!-- Audio Track Selector -->
-              @if (audioTracks.length > 1) {
-                <div
-                  class="flex items-center space-x-2"
-                  >
-                  <label for="audioSelect" class="text-sm text-gray-300">Audio:</label>
-                  <select
-                    id="audioSelect"
-                    [value]="selectedAudioTrack"
-                    (change)="onAudioTrackChange($event)"
-                    class="bg-gray-800 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                    @for (track of audioTracks; track track) {
-                      <option
-                        [value]="track.id"
-                        >
-                        {{ track.name }} ({{ track.lang }})
-                      </option>
-                    }
-                  </select>
-                </div>
-              }
-              <!-- Fullscreen Button -->
-              <button
-                (click)="toggleFullscreen()"
-                class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded transition-colors"
-                >
-                <span>{{ isFullscreen ? '🔲' : '⛶' }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-
-    <!-- Player Info -->
-    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-      <div class="bg-gray-800 p-4 rounded-lg">
-        <h3 class="font-semibold mb-2">Video Info</h3>
-        <p>URL: <span class="text-gray-300 break-all">{{ videoUrl }}</span></p>
-        <p>Duration: <span class="text-gray-300">{{ formatTime(duration) }}</span></p>
-      </div>
-
-      <div class="bg-gray-800 p-4 rounded-lg">
-        <h3 class="font-semibold mb-2">Quality Levels</h3>
-        @if (qualityLevels.length > 0) {
-          <div>
-            @for (quality of qualityLevels; track quality) {
-              <p class="text-gray-300">
-                {{ quality.name }}
-              </p>
-            }
-          </div>
-        } @else {
-          <p class="text-gray-500">No quality levels available</p>
-        }
-      </div>
-
-      <div class="bg-gray-800 p-4 rounded-lg">
-        <h3 class="font-semibold mb-2">Audio Tracks</h3>
-        @if (audioTracks.length > 0) {
-          <div>
-            @for (track of audioTracks; track track) {
-              <p class="text-gray-300">
-                {{ track.name }} ({{ track.lang }})
-                @if (track.isDefault) {
-                  <span class="text-blue-400">[Default]</span>
-                }
-              </p>
-            }
-          </div>
-        } @else {
-          <p class="text-gray-500">No audio tracks available</p>
-        }
-      </div>
-    </div>
+  <div class="workspace">
+    <section class="player-panel" aria-labelledby="player-heading">
+      <div class="section-heading"><h2 id="player-heading">The picture</h2><span class="state" role="status">{{ status }}</span></div>
+      <div class="video-wrap"><video #videoElement controls playsinline preload="metadata" aria-label="HLS video player" (loadedmetadata)="updateMedia($event)" (durationchange)="updateMedia()" (timeupdate)="updateMedia()" (progress)="updateMedia()" (play)="updateMedia($event)" (playing)="updateMedia($event)" (pause)="updateMedia($event)" (waiting)="updateMedia($event)" (stalled)="updateMedia($event)" (ended)="updateMedia($event)" (error)="mediaError()"></video>@if(!sourceOrigin){<div class="video-placeholder" aria-hidden="true"><span>▷</span><p>Your stream goes here.</p></div>}</div>
+      <div class="player-selects"><label>Quality<select aria-label="Quality" [value]="selectedQuality" (change)="chooseQuality($event)" [disabled]="!manualQualityAvailable"><option value="-1">Auto · adaptive</option>@for(level of qualityLevels;track level.index){<option [value]="level.index">{{ level.height ? level.height + 'p' : 'Level ' + (level.index + 1) }} · {{ kbps(level.bitrate) }}</option>}</select></label><label>Audio<select aria-label="Audio track" [value]="selectedAudio" (change)="chooseAudio($event)" [disabled]="!audioTracks.length"><option value="-1">Browser / default</option>@for(track of audioTracks;track track.index){<option [value]="track.index">{{ track.label }}</option>}</select></label></div>
+      <p class="helper">{{ engine }} @if(engine.startsWith('Native')){<span> · Safari manages quality and requests; detailed segment timings are unavailable.</span>}</p>
+    </section>
+    <section class="health-panel" aria-labelledby="health-heading"><div class="section-heading"><h2 id="health-heading">Pulse check</h2><span>Updates while playing</span></div><div class="metrics">
+      <article><span>BUFFER AHEAD</span><strong>{{ bufferSeconds.toFixed(1) }} <small>s</small></strong><p>Playable data after the current position</p></article>
+      <article><span>BANDWIDTH ESTIMATE</span><strong class="small-metric">{{ bandwidth === null ? 'Unavailable' : kbps(bandwidth) }}</strong><p>Hls.js estimate after segments load</p></article>
+      <article><span>LIVE LATENCY</span><strong class="small-metric">{{ liveLatency === null ? (streamType === 'VOD' ? 'Not a live stream' : 'Unavailable') : seconds(liveLatency) }}</strong><p>Distance from the estimated live edge</p></article>
+      <article><span>CURRENT RENDITION</span><strong class="small-metric">{{ currentLevel < 0 ? 'Not selected yet' : 'Level ' + currentLevel }}</strong><p>{{ selectedQuality < 0 ? 'Adaptive quality enabled' : 'Manual quality requested' }}</p></article>
+    </div><div class="buffer-detail"><span>Buffered ranges</span><code>{{ bufferedRanges }}</code><span>Position / duration</span><code>{{ seconds(currentTime) }} / {{ duration === null ? (streamType==='Live' ? 'Live' : 'Unavailable') : seconds(duration) }}</code></div></section>
   </div>
-</div>
 
-<router-outlet></router-outlet>
+  <section class="manifest-panel" aria-labelledby="manifest-heading"><div class="section-heading"><h2 id="manifest-heading">Inside the playlist</h2><span>{{ playlist ? playlist.kind + ' playlist' : 'Waiting for a stream' }}</span></div>
+    <dl class="manifest-summary"><div><dt>Source origin</dt><dd>{{ sourceOrigin || 'No stream loaded' }}</dd></div><div><dt>Stream type</dt><dd>{{ streamType }}</dd></div><div><dt>Target segment</dt><dd>{{ seconds(targetDuration) }}</dd></div><div><dt>Listed segments</dt><dd>{{ mediaSegments === null ? 'Unavailable' : mediaSegments }}</dd></div><div><dt>Playlist duration</dt><dd>{{ seconds(listedDuration) }}</dd></div><div><dt>Encrypted segments</dt><dd>{{ playlist ? (encrypted ? 'Declared in playlist' : 'None declared') : 'Unavailable' }}</dd></div><div><dt>Inspection time</dt><dd>{{ manifestTime === null ? 'Unavailable' : manifestTime + ' ms' }}</dd></div><div><dt>Segments received</dt><dd>{{ loadedSegments }} · {{ size(segmentBytes) }}</dd></div></dl>
+    @if(qualityLevels.length){<div class="table-scroll"><table class="renditions"><caption>Available renditions</caption><thead><tr><th>Level</th><th>Resolution</th><th>Declared bitrate</th><th>Codecs</th><th>Playback</th></tr></thead><tbody>@for(level of qualityLevels;track level.index){<tr [class.active-row]="currentLevel===level.index"><td>{{ level.index }}</td><td>{{ level.width && level.height ? level.width + ' × ' + level.height : 'Not declared' }}</td><td>{{ kbps(level.bitrate) }}</td><td><code>{{ level.codecs }}</code></td><td>{{ currentLevel===level.index ? 'Playing' : selectedQuality===level.index ? 'Requested' : 'Available' }}</td></tr>}</tbody></table></div>}@else{<p class="helper">Master playlists list renditions. A direct media playlist may contain only one stream and omit its bitrate or resolution.</p>}
+  </section>
+  <section class="network-panel" aria-labelledby="network-heading"><div class="section-heading network-heading"><div><h2 id="network-heading">Request & event timeline</h2><p class="helper">Latest 120 events. Resource origins only—paths and tokens are excluded.</p></div><div class="report-actions"><button type="button" (click)="copyReport()">Copy report</button><button type="button" (click)="downloadReport()">Download JSON</button><button type="button" class="text-button" (click)="clearLog()">Clear</button></div></div>@if(copyMessage){<p class="copy-status" role="status">{{ copyMessage }}</p>}
+    <div class="table-scroll"><table class="timeline"><caption class="sr-only">Stream requests and playback events</caption><thead><tr><th>Time (UTC)</th><th>Kind</th><th>Result</th><th>Size</th><th>Load time</th><th>Throughput</th><th>Origin</th></tr></thead><tbody>@for(entry of entries;track $index){<tr [class.error-row]="entry.kind==='Error'"><td><code>{{ time(entry.time) }}</code></td><td>{{ entry.kind }}</td><td>{{ entry.result }}</td><td>{{ size(entry.bytes) }}</td><td>{{ entry.milliseconds === null ? '—' : entry.milliseconds.toFixed(0) + ' ms' }}</td><td>{{ entry.throughput === null ? '—' : kbps(entry.throughput) }}</td><td>{{ entry.origin }}</td></tr>}@empty{<tr><td colspan="7" class="empty">Load a stream to inspect its requests and playback events.</td></tr>}</tbody></table></div>
+  </section>
+  <footer><strong>Giorgi’s little streaming lab.</strong><p>Diagnostics reflect what your browser observes. Cached requests, native playback, encryption, and server CORS rules can limit available details.</p><a href="https://giorgi.app/">Back to the junk drawer ↗</a></footer>
+</main>

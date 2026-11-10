@@ -1,4 +1,4 @@
-name: HLS Player deployment
+name: Legacy standalone HLS deployment (superseded)
 
 on:
   push:
@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ false }} # Active products workflow now deploys HLS Inspector.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

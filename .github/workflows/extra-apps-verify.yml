@@ -1,4 +1,4 @@
-name: Verify live experiment apps
+name: Legacy compiler verification (superseded)
 on:
   push:
     branches: [codex/portfolio-subdomains]
@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   verify:
+    if: ${{ false }} # Replaced by the active-products browser suites.
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:

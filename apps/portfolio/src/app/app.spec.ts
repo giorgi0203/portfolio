@@ -30,7 +30,7 @@ describe('App', () => {
     const link = fixture.nativeElement.querySelector(
       'a[href="https://hls-player.giorgi.app/"]',
     );
-    expect(link?.textContent.trim()).toBe('HLS Player');
+    expect(link?.textContent.trim()).toBe('HLS Inspector');
   });
   it('links directly to the deployed todo list', () => {
     const fixture = TestBed.createComponent(App);

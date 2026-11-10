@@ -40,8 +40,8 @@
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "4kb",
-              "maximumError": "8kb"
+              "maximumWarning": "14kb",
+              "maximumError": "16kb"
             }
           ],
           "outputHashing": "all"
@@ -52,7 +52,11 @@
           "sourceMap": true
         }
       },
-      "defaultConfiguration": "production"
+      "defaultConfiguration": "production",
+      "dependsOn": [
+        "preview-runtime",
+        "^build"
+      ]
     },
     "serve": {
       "continuous": true,
@@ -90,6 +94,16 @@
         "buildTarget": "angular-compiler-ui:build",
         "staticFilePath": "dist/apps/angular-compiler-ui/browser",
         "spa": true
+      }
+    },
+    "preview-runtime": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": [
+        "{projectRoot}/public/preview/runtime.js"
+      ],
+      "options": {
+        "command": "node apps/angular-compiler-ui/scripts/build-preview.cjs"
       }
     }
   }

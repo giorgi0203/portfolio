@@ -14,7 +14,7 @@ describe('Personal workshop', () => {
     const page: HTMLElement = fixture.nativeElement;
     expect(
       page
-        .querySelector('a[aria-label="Open HLS Player"]')
+        .querySelector('a[aria-label="Open HLS Inspector"]')
         ?.getAttribute('href'),
     ).toBe('https://hls-player.giorgi.app/');
     expect(
@@ -25,7 +25,7 @@ describe('Personal workshop', () => {
     expect(page.querySelector('.hero-portrait')?.getAttribute('alt')).toContain(
       'Giorgi',
     );
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(3);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(5);
     for(const host of ['example-mcp','mcp','api']) expect(page.querySelector('a[href="https://'+host+'.giorgi.app/"]')).toBeNull();
   });
 
@@ -41,8 +41,8 @@ describe('Personal workshop', () => {
     expect(
       page.querySelector('[aria-label="Open Smart Todo List"]'),
     ).not.toBeNull();
-    expect(page.querySelector('[aria-label="Open HLS Player"]')).toBeNull();
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(2);
+    expect(page.querySelector('[aria-label="Open HLS Inspector"]')).toBeNull();
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(4);
   });
 
   it('offers another idea for a future project', () => {

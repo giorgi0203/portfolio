@@ -70,4 +70,15 @@ Use `npx nx run-many -t build -p angular-compiler-ui,angular-compiler-api,exampl
 
 See [extra-app deployment notes](docs/EXTRA_APPS_DEPLOYMENT.md) for packaging, service limits, TLS and rollback. The new apps use the same private analytics dashboard. Page views exclude API bodies, source code and query strings, and respect Do Not Track and Global Privacy Control.
 
-The public portfolio shows HLS Player, Smart Todo and Angular Compiler. Portfolio API stays online as infrastructure but is hidden from the gallery and navigation. The Example MCP and MCP Gateway services are disabled and their old HTTPS endpoints return 410. DNS and ACME challenge routes are retained because the shared TLS certificate still covers those hostnames. The old full-stack deployment is disabled to avoid restarting retired demos.
+The public portfolio shows the active learning, utility, monitoring and playback apps. Portfolio API stays online as infrastructure but is hidden from the gallery and navigation. The Example MCP and MCP Gateway services are disabled and their old HTTPS endpoints return 410. DNS and ACME challenge routes are retained because the shared TLS certificate still covers those hostnames. The old full-stack deployment is disabled to avoid restarting retired demos.
+
+## Learning and utility products
+
+The public gallery now features HLS Inspector, Smart Todo, Angular Learning Lab, Developer Toolbox and Website Health. Portfolio API remains hidden infrastructure, and both MCP demos remain stopped/disabled.
+
+- **Angular Learning Lab:** https://angular-compiler.giorgi.app — five guided lessons, real Angular preview, challenges/hints, state visualization, advanced AOT output, guest drafts, portable share links, and account-backed private experiments/progress. Shared imports wait for explicit Run; browser previews have an opaque sandbox origin.
+- **Developer Toolbox:** https://toolbox.giorgi.app — JSON format/diff/types, timestamps, URL/query editing and worker-bounded regex; entered data stays in the browser.
+- **Website Health:** https://status.giorgi.app — actual first-party HTTPS/TLS observations, response history, certificate expiry and incidents. Monitoring history begins at rollout.
+- **HLS Inspector:** https://hls-player.giorgi.app — playback, rendition/quality/audio controls, buffer/network/live diagnostics and origin-only redacted export. CORS/native-playback limits are shown explicitly.
+
+See [implementation plan](docs/PRODUCT_EXPANSION_PLAN.md) and [active deployment notes](docs/ACTIVE_PRODUCTS_DEPLOYMENT.md). `products-deploy.yml` replaces the disabled legacy full-stack and standalone HLS rollout. Build source before packaging with `python3 scripts/package-products.py`. Browser verification is part of the rollout, and the portfolio links are published only after those checks pass.
