@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+[[ ! -L /var/www/giorgi-learning-lab/current ]] || { echo 'Learning Lab is independently managed; use its scoped deployment.' >&2; exit 1; }
 stage=${1:?disk stage required}; source_id=${2:?source SHA required}
 [[ $stage =~ ^/var/tmp/giorgi-products-[a-f0-9]{40}$ && $source_id =~ ^[a-f0-9]{40}$ ]]
 ip -4 -o addr show | grep '138.68.64.163/' >/dev/null

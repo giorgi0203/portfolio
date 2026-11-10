@@ -82,3 +82,9 @@ The public gallery now features HLS Inspector, Smart Todo, Angular Learning Lab,
 - **HLS Inspector:** https://hls-player.giorgi.app — playback, rendition/quality/audio controls, buffer/network/live diagnostics and origin-only redacted export. CORS/native-playback limits are shown explicitly.
 
 See [implementation plan](docs/PRODUCT_EXPANSION_PLAN.md) and [active deployment notes](docs/ACTIVE_PRODUCTS_DEPLOYMENT.md). `products-deploy.yml` replaces the disabled legacy full-stack and standalone HLS rollout. Build source before packaging with `python3 scripts/package-products.py`. Browser verification is part of the rollout, and the portfolio links are published only after those checks pass.
+
+### Interactive compiler inspector
+
+Learning Lab now has primary Source, Live Preview/Inspector and Compiler panes. Hover/focus rendered elements or click to pin them; mapped source, real component values and available loop locals are shown together. Source selections can focus the preview. Compiler output has annotated/raw modes, creation/update/event explanations and related-source navigation. Generated-code source matches are marked approximate; stale results and unsupported template mappings are disclosed.
+
+Use the dedicated Learning Lab workflow for browser-only updates: build `angular-compiler-ui`, run its unit/privacy and browser suites, then `python3 scripts/package-learning-lab.py`. See [inspector notes](docs/LEARNING_INSPECTOR.md). This scoped deployment preserves account/AOT proxies and other apps. The historical initial-product provisioning job is disabled to prevent overwriting its independent static root.

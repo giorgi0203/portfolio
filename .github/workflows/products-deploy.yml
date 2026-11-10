@@ -1,4 +1,4 @@
-name: Deploy active learning and utility products
+name: Initial products provisioning (superseded)
 on:
   push:
     branches: [codex/portfolio-subdomains]
@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    if: ${{ false }} # Scoped Learning Lab deployments now own its static root.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

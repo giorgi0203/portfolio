@@ -1,4 +1,4 @@
 export function previewDocument(origin:string,channel:string):string {
- const runtime=origin+'/preview/runtime.js';
+ const runtime=origin+'/preview/runtime.js?inspector=2';
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' ${origin}; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; worker-src 'none'; form-action 'none'; base-uri 'none'"><style>*{box-sizing:border-box}body{font:15px/1.6 system-ui;margin:0;padding:26px;background:#fff;color:#253a31}h1,h2{line-height:1.25}button{font:inherit;cursor:pointer;border:0;border-radius:9px;background:#254b39;color:white;padding:10px 16px;margin:5px}input{font:inherit;padding:10px;border:1px solid #b4c5b8;border-radius:8px}ul{padding-left:24px}p{overflow-wrap:anywhere}</style></head><body><div id="mount"></div><script>window.__LEARNING_PREVIEW__=${JSON.stringify({channel,parentOrigin:origin})};</script><script src="${runtime}"></script></body></html>`;
 }

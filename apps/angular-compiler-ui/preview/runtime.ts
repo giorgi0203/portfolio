@@ -5,6 +5,8 @@ import * as forms from '@angular/forms';
 import * as browser from '@angular/platform-browser';
 import * as rxjs from 'rxjs';
 import * as ts from 'typescript';
+import {instrumentSource} from './source-map';
+import {PreviewInspector,componentState} from './inspector';
 
 type Check={label:string;kind:'text'|'click-text'|'fill-text';selector:string;value?:string;expected:string};
 type Config={channel:string;parentOrigin:string};
@@ -13,31 +15,29 @@ let application:core.ApplicationRef|undefined,observer:MutationObserver|undefine
 let lastState:Record<string,string>={},batches=0;
 const modules:Record<string,unknown>={'@angular/core':core,'@angular/common':common,'@angular/forms':forms,'@angular/platform-browser':browser,rxjs};
 function send(type:string,data:Record<string,unknown>={}){window.parent.postMessage({channel:config.channel,type,runId,...data},config.parentOrigin);}
-function state(){
+const mountNode=document.querySelector('#mount');
+if(!mountNode)throw new Error('Preview mount is missing.');
+const previewMount:Element=mountNode;
+const inspector=new PreviewInspector(previewMount,send);
+function state(mutated=false){
  const instance=application?.components[0]?.instance;
  if(!instance)return;
- const next:Record<string,string>={};
- for(const [key,value] of Object.entries(instance).slice(0,30)){
-  if(key.startsWith('_')||key.startsWith('ɵ'))continue;
-  try{
-   const current=core.isSignal(value)?value():value;
-   if(typeof current==='function'||current instanceof Node)continue;
-   const text=JSON.stringify(current);
-   if(text!==undefined)next[key]=text.slice(0,500);
-  }catch{ /* A user getter does not prevent the other state values from appearing. */ }
- }
+ const next=componentState(instance);
  const changes=Object.keys(next).filter(key=>next[key]!==lastState[key]).map(key=>({name:key,before:lastState[key]??'—',after:next[key]}));
  lastState=next;
  send('learning:state',{state:next,changes,batches});
+ inspector.rendered(changes,mutated);
 }
 const pause=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function run(source:string,checks:Check[]){
  observer?.disconnect();application?.destroy();application=undefined;
- lastState={};batches=0;
- const mount=document.querySelector('#mount')!;mount.replaceChildren();
+ lastState={};batches=0;inspector.reset([]);
+ const mount=previewMount;mount.replaceChildren();
  try{
   if(source.length>60000)throw new Error('Keep experiments below 60 KB.');
-  const output=ts.transpileModule(source,{reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,experimentalDecorators:true,emitDecoratorMetadata:false,useDefineForClassFields:false}});
+  const mapped=instrumentSource(source);inspector.reset(mapped.blocks);
+  send('learning:inspection-map',{blocks:mapped.blocks,truncated:mapped.truncated,unmappedComponents:mapped.unmappedComponents.slice(0,20)});
+  const output=ts.transpileModule(mapped.source,{reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,experimentalDecorators:true,emitDecoratorMetadata:false,useDefineForClassFields:false}});
   const errors=(output.diagnostics||[]).filter(d=>d.category===ts.DiagnosticCategory.Error);
   if(errors.length)throw new Error(errors.map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')).join('\n'));
   const exports:Record<string,unknown>={},module={exports};
@@ -50,7 +50,7 @@ async function run(source:string,checks:Check[]){
   mount.append(document.createElement(selector));
   application=await browser.bootstrapApplication(root,{providers:[core.provideZonelessChangeDetection()]});
   await application.whenStable();
-  observer=new MutationObserver(()=>{batches++;state();});observer.observe(mount,{subtree:true,childList:true,characterData:true,attributes:true});
+  observer=new MutationObserver(()=>{batches++;state(true);});observer.observe(mount,{subtree:true,childList:true,characterData:true,attributes:true});
   state();send('learning:rendered');
   const results=[];
   for(const check of checks.slice(0,12)){
@@ -72,6 +72,11 @@ async function run(source:string,checks:Check[]){
 document.addEventListener('click',()=>setTimeout(state,50));document.addEventListener('input',()=>setTimeout(state,50));
 window.addEventListener('message',event=>{
  if(event.source!==window.parent||event.origin!==config.parentOrigin||event.data?.channel!==config.channel)return;
+ if(event.data.runId===runId){
+  if(event.data.type==='learning:inspect-mode'){inspector.setEnabled(event.data.enabled!==false);return;}
+  if(event.data.type==='learning:focus-block'&&typeof event.data.blockId==='string'){inspector.focusBlock(event.data.blockId,event.data.pin!==false);return;}
+  if(event.data.type==='learning:unpin'){inspector.unpin();return;}
+ }
  if(event.data.type==='learning:run'&&typeof event.data.source==='string'){
   runId=event.data.runId;void run(event.data.source,Array.isArray(event.data.checks)?event.data.checks:[]);
  }
