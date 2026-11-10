@@ -2,7 +2,7 @@ name: HLS Player deployment
 
 on:
   push:
-    branches: [codex/hls-player-subdomain]
+    branches: [codex/hls-player-subdomain, codex/portfolio-subdomains]
     paths:
       - '.github/workflows/hls-player-deploy.yml'
   workflow_dispatch:
