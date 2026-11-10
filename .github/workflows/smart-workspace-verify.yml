@@ -24,8 +24,8 @@ jobs:
           script: |
             set -eu
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            test "$(basename "$(readlink -f /var/www/smart-todolist-workspace/current)")" = "0be8fb38a70d6beca1decf40a907ef4fb0b07557"
-            script=/tmp/verify-workspace-0be8fb38a70d6beca1decf40a907ef4fb0b07557.py
-            curl -fsS --max-time 30 https://raw.githubusercontent.com/giorgi0203/smart-todolist/0be8fb38a70d6beca1decf40a907ef4fb0b07557/deploy/verify-workspace.py -o "$script"
+            test "$(basename "$(readlink -f /var/www/smart-todolist-workspace/current)")" = "7bf20298a218a76e626183070dcf05261f6a867b"
+            script=/tmp/verify-workspace-7bf20298a218a76e626183070dcf05261f6a867b.py
+            curl -fsS --max-time 30 https://raw.githubusercontent.com/giorgi0203/smart-todolist/7bf20298a218a76e626183070dcf05261f6a867b/deploy/verify-workspace.py -o "$script"
             printf '%s  %s\n' '65aac58b03ddb0f75ce47f61595bab0d56323496434fb3ca1d161f6dee2a1b99' "$script" | sha256sum --check --strict
             sudo -n python3 "$script"
