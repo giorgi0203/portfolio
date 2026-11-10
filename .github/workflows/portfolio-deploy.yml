@@ -33,10 +33,10 @@ jobs:
           command_timeout: 5m
           script: |
             set -eu
-            ip -4 -o addr show | grep -q '138.68.64.163/'
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/2cd67a1c8e9ca2de4148ed4b5ea149a164803fc9/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '0271393d766790abfce41dcf35edceb7329fe755e61396c4dd921e767ce79e22' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/40266601de5fc81f79d63799756e96a81ad7b3f6/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '2c2370ef2bfc956fbd0fb92a8f7105303d7436015f089328e7c45444c8bc2dc9' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
