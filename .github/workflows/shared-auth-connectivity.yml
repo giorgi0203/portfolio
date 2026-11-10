@@ -31,11 +31,16 @@ jobs:
             const page=await browser.newPage({viewport:{width:1440,height:1000}});
             page.on('console',m=>{if(m.type()==='error')console.log('BROWSER ERROR',m.text());});
             page.on('requestfailed',r=>console.log('REQUEST FAILED',new URL(r.url()).origin+new URL(r.url()).pathname,r.failure()?.errorText));
+            let failEmbed=true;
+            await page.route('https://auth.giorgi.app/embed**',route=>failEmbed?route.abort('connectionclosed'):route.continue());
             await page.goto('https://giorgi.app/',{waitUntil:'networkidle'});
             await page.keyboard.press('Meta+Period');
             await page.getByRole('dialog').waitFor();
+            await page.getByRole('button',{name:'Retry sign-in',exact:true}).waitFor({timeout:20000});
+            failEmbed=false;
+            await page.getByRole('button',{name:'Retry sign-in',exact:true}).click();
             await page.frameLocator('iframe[title="Giorgi account sign-in"]').getByRole('heading',{name:'Good to see you.',exact:true}).waitFor({timeout:20000});
-            console.log('PASS live Chrome embedded login heading');
+            console.log('PASS live Chrome embedded connection failure, retry and loaded sign-in');
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
           JS
