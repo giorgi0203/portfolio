@@ -1,0 +1,32 @@
+name: Configure portfolio enquiries
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/portfolio-contact-settings.yml']
+permissions:
+  contents: read
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            sudo -n python3 - <<'PY'
+            import pathlib,json,os,grp,urllib.request
+            path=pathlib.Path('/etc/smart-todolist/contact.json')
+            path.write_text(json.dumps({'email':'Giorgi1997arabuli@gmail.com'}))
+            os.chmod(path,0o640);os.chown(path,0,grp.getgrnam('www-data').gr_gid)
+            body={'name':'Giorgi website check','email':'delivered@resend.dev','message':'This is a test of the contact form on giorgi.app. Delivery is now configured; real visitor enquiries will arrive here with their email as the reply address.'}
+            req=urllib.request.Request('https://giorgi.app/api/contact',headers={'Content-Type':'application/json','Origin':'https://giorgi.app'},data=json.dumps(body).encode())
+            with urllib.request.urlopen(req,timeout=20) as r:
+              assert json.load(r)['success'] is True
+              print('Contact form accepted a real test message for Gmail delivery')
+            PY
