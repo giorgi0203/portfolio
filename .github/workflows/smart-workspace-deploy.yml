@@ -30,17 +30,17 @@ jobs:
             set -eu
             test -n "$SMART_TODO_AI_KEY"
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            stage=/tmp/smart-workspace-64f1cadf24a1b2becb1c327a650a72fd32454ecd
+            stage=/tmp/smart-workspace-3a9abcdc14ba57593675925a81ec3765cbd9819e
             sudo -n python3 - "$stage" <<'PYCLEAN'
             import pathlib,re,shutil,sys
             for p in pathlib.Path('/tmp').iterdir():
               if str(p)!=sys.argv[1] and re.fullmatch(r'smart-workspace-[a-f0-9]{40}',p.name) and p.is_dir() and not p.is_symlink() and (p/'bundle.tar.gz').is_file():shutil.rmtree(p)
             PYCLEAN
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/64f1cadf24a1b2becb1c327a650a72fd32454ecd/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '6469e67cdae1c8a3f98c03ca6783ac41c67f277c0a68e5734299434356093590' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/3a9abcdc14ba57593675925a81ec3765cbd9819e/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'ee299627f02141ab5676211450762cefa3c485a5b7cd56f1af180ab61638f7d7' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-shared-suite.sh" "$stage" b0847c73de2eaf8ae8c46dad633d61d1027d3a14
+            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-shared-suite.sh" "$stage" 0be8fb38a70d6beca1decf40a907ef4fb0b07557
             unset SMART_TODO_AI_KEY
             sudo -n python3 - <<'PYHEADERS'
             import urllib.request,json
