@@ -30,11 +30,11 @@ jobs:
             set -eu
             test -n "$SMART_TODO_AI_KEY"
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            stage=/tmp/smart-workspace-1aff2bf53e459a9f37225ac2f7a953635eef4ed2
+            stage=/tmp/smart-workspace-71ac2026b79d7b7a89a3ce8fab1987a666e8cd9a
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/1aff2bf53e459a9f37225ac2f7a953635eef4ed2/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '4ae3a1f6b9a4f002beabfa6249d9a06e6d3dd39f4059226c18c062d9333a2b0c' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/71ac2026b79d7b7a89a3ce8fab1987a666e8cd9a/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'ccc2c5386d7d404f713e990626a4034ebe283fe08c8a891545d2e43b72778046' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-workspace.sh" "$stage" 2e815011cf4c4f361f8ec5ce306061692f6bf2bf
+            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-workspace.sh" "$stage" ffc313420d5d13c89f623484fe7d31c261d9bf58
             unset SMART_TODO_AI_KEY
             sudo -n python3 "$stage/deploy/verify-workspace.py"
