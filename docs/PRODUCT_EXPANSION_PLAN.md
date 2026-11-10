@@ -24,3 +24,5 @@ Implementation and local validation complete: five actual Angular starter/soluti
 
 
 Live rollout completed successfully: https://github.com/giorgi0203/portfolio/actions/runs/42877931796 . All four independent public browser suites passed. Production shared-learning HTTPS checks passed including saved experiments, progress, ownership, CSRF, distinct host-only cookies and global logout. Toolbox and status DNS/TLS are live; retired MCP endpoints still return410. Product code, preview and utility inputs do not enter analytics. Public homepage links are the final rollout stage.
+
+Public gallery rollout completed: https://github.com/giorgi0203/portfolio/actions/runs/42878352126 . Live Chrome verified all five active cards, correct URLs, hidden infrastructure, shared login and mobile layout. Both repositories are committed and the deployed homepage matches its verified static artifact.
