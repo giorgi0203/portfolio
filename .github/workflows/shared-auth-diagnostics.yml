@@ -1,10 +1,13 @@
-name: Inspect shared auth runtime
+name: Clean and inspect shared auth runtime
 on:
   push:
     branches: [codex/portfolio-subdomains]
     paths: ['.github/workflows/shared-auth-diagnostics.yml']
 permissions:
   contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
 jobs:
   inspect:
     runs-on: ubuntu-latest
