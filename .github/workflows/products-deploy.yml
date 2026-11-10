@@ -1,0 +1,65 @@
+name: Deploy active learning and utility products
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/products-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-products-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install verified products with rollback
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 7m
+          script: |
+            set -eu
+            stage=/var/tmp/giorgi-products-${{ github.sha }}
+            mkdir -p "$stage"
+            trap 'rm -rf -- "$stage"' EXIT
+            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/e6b8c7bd055ad52bbb86fe67114081d11a681293/products-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '8903fafe1b5fa2414bbb9d29e2fb256d6dbc9de4289cb9f832f151856ca906ae' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n bash "$stage/deploy/install-products.sh" "$stage" 12c8f4839d004a19f8e94bceb86080feb04b3c2e
+  browser:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [toolbox, health, hls, learning]
+    env:
+      TOOLBOX_URL: https://toolbox.giorgi.app/
+      HEALTH_URL: https://status.giorgi.app/
+      HLS_URL: https://hls-player.giorgi.app/
+      LAB_URL: https://angular-compiler.giorgi.app/
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 12c8f4839d004a19f8e94bceb86080feb04b3c2e
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install browser harness
+        run: npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Exercise real product workflows
+        run: |
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/browser/node_modules/playwright"
+          case '${{ matrix.app }}' in
+            toolbox) node scripts/toolbox-browser.cjs ;;
+            health) node scripts/health-browser.cjs ;;
+            hls) node scripts/hls-inspector-browser.cjs ;;
+            learning) node scripts/learning-browser.cjs ;;
+          esac
