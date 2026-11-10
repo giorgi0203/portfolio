@@ -20,6 +20,10 @@ describe('App', () => {
     expect(link.getAttribute('href')).toBe('/');
   });
 
+  it('keeps hidden infrastructure out of project navigation',()=>{
+    const fixture=TestBed.createComponent(App);fixture.detectChanges();
+    for(const host of ['example-mcp','mcp','api']) expect(fixture.nativeElement.querySelector('a[href="https://'+host+'.giorgi.app/"]')).toBeNull();
+  });
   it('links directly to the deployed HLS player', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();

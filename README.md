@@ -16,8 +16,6 @@ The additional experiments are deployed independently:
 | App | URL | Purpose |
 | --- | --- | --- |
 | Angular AOT Compiler | https://angular-compiler.giorgi.app/ | Monaco editor, real Angular 21 compilation and diagnostics |
-| Example MCP | https://example-mcp.giorgi.app/ | Streamable HTTP tools, resources and prompts at `/mcp` |
-| MCP Gateway | https://mcp.giorgi.app/ | Backend discovery at `/servers`; example endpoint `/mcp/example` |
 | Portfolio API | https://api.giorgi.app/ | OpenAPI docs and the real project catalog |
 
 The MCP apps are developer services; their landing pages show connection settings for an MCP client. The API is read-only. Its old demo contact endpoint returns HTTP 410 and directs visitors to the working homepage form.
@@ -71,3 +69,5 @@ The shared service source and its protocol/deployment notes live in the [Smart T
 Use `npx nx run-many -t build -p angular-compiler-ui,angular-compiler-api,example-mcp,mcp-gateway,portfolio-api,portfolio --parallel=2`, then install the pinned compiler dependencies with `npm ci --prefix deploy/compiler-runtime --ignore-scripts`. Run `python3 scripts/run-extra-app-checks.py` for actual AOT, MCP, API, and browser checks. Chromium and Playwright are required for the browser checks; their paths can be supplied via `CHROME_PATH` and `PLAYWRIGHT_MODULE`.
 
 See [extra-app deployment notes](docs/EXTRA_APPS_DEPLOYMENT.md) for packaging, service limits, TLS and rollback. The new apps use the same private analytics dashboard. Page views exclude API bodies, source code and query strings, and respect Do Not Track and Global Privacy Control.
+
+The public portfolio shows HLS Player, Smart Todo and Angular Compiler. Portfolio API stays online as infrastructure but is hidden from the gallery and navigation. The Example MCP and MCP Gateway services are disabled and their old HTTPS endpoints return 410. DNS and ACME challenge routes are retained because the shared TLS certificate still covers those hostnames. The old full-stack deployment is disabled to avoid restarting retired demos.

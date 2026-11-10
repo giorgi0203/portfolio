@@ -35,12 +35,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
     const projectResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/projects');
     await projects.getByRole('button',{name:'Execute',exact:true}).click();
     assert.equal((await (await projectResponse).json()).length,6);
-    for(const [url,title] of [[process.env.EXAMPLE_URL||'http://127.0.0.1:3411','Example MCP'],[process.env.GATEWAY_URL||'http://127.0.0.1:3421','MCP Gateway']]){
+    for(const [url,title] of (process.env.MCP_DISABLED?[]:[[process.env.EXAMPLE_URL||'http://127.0.0.1:3411','Example MCP'],[process.env.GATEWAY_URL||'http://127.0.0.1:3421','MCP Gateway']])){
       await page.goto(url,{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:title,exact:true}).waitFor();
       assert.match(await page.locator('#config').innerText(),/mcp/);
     }
     assert.deepEqual(errors, []);
-    console.log('PASS Chrome editor loading, Counter/List/Form Ivy compilation, output editor, mobile layout, Swagger execution and MCP landing pages');
+    console.log('PASS Chrome editor loading, Counter/List/Form Ivy compilation, output editor, mobile layout and interactive API documentation');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,4 +1,4 @@
-name: Deploy verified extra apps
+name: Legacy full demo stack (disabled)
 on:
   push:
     branches: [codex/portfolio-subdomains]
@@ -11,6 +11,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    # The owner retired the MCP demos; this old bundle would re-enable them.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

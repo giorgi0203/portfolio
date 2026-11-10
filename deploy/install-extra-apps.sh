@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+[[ ! -f /etc/giorgi-extras/mcp-disabled ]] || { echo 'The legacy stack includes disabled MCP demos. Use a deployment for the active compiler/API services.' >&2; exit 1; }
 stage=${1:?staging directory required}
 release_id=${2:?source SHA required}
 [[ $release_id =~ ^[a-f0-9]{40}$ && $stage =~ ^/var/tmp/giorgi-extra-[a-f0-9]{40}$ ]]

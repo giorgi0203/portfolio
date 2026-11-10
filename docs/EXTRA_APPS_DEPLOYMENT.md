@@ -1,5 +1,8 @@
 # Additional experiments
 
+**Current state:** Example MCP and MCP Gateway have been retired at the owner’s request. Their systemd services are stopped/disabled and their HTTPS endpoints return 410. Keep the DNS and ACME challenge routes for renewal of the shared certificate. The legacy full-stack deployment is disabled and the installer refuses to run when `/etc/giorgi-extras/mcp-disabled` exists. Compiler and API stay running; API is hidden from the public gallery.
+
+
 The Angular compiler UI/API, Example MCP, MCP Gateway and Portfolio API are built and tested before deployment. They use the existing droplet and Nginx, with four separate HTTPS hosts:
 
 | Host | Service | Loopback port |
