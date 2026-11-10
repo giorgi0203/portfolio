@@ -51,14 +51,20 @@ if [[ ! -L "$enabled" ]]; then
 fi
 if ! nginx -t; then rollback; exit 1; fi
 if ! systemctl reload nginx; then rollback; exit 1; fi
-# Reload is asynchronous: retry until new workers serve this virtual host.
-if ! curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 1 --max-time 10 -H 'Host: hls-player.giorgi.app' -H 'Connection: close' http://127.0.0.1/ -o "$stage/http-check.html" || ! grep -q '<title>hls-player</title>' "$stage/http-check.html"; then
+# Existing installations redirect HTTP to HTTPS; verify the active TLS site directly.
+if [[ -f /etc/letsencrypt/live/hls-player.giorgi.app/fullchain.pem ]]; then
+  health_url=https://hls-player.giorgi.app/
+else
+  health_url=http://hls-player.giorgi.app/
+fi
+if ! curl --fail --location --silent --show-error --retry 5 --retry-all-errors --retry-delay 1 --max-time 10 --resolve hls-player.giorgi.app:443:127.0.0.1 --resolve hls-player.giorgi.app:80:127.0.0.1 "$health_url" -o "$stage/http-check.html" || ! grep -q '<title>hls-player</title>' "$stage/http-check.html"; then
   rollback
   nginx -t && systemctl reload nginx
   exit 1
 fi
-# Reuse this server's existing ACME account. Failure is reported; no security bypass.
-certbot --nginx --non-interactive --redirect -d hls-player.giorgi.app
+if [[ ! -f /etc/letsencrypt/live/hls-player.giorgi.app/fullchain.pem ]]; then
+  certbot --nginx --non-interactive --redirect -d hls-player.giorgi.app
+fi
 nginx -t
 systemctl reload nginx
 curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 1 --max-time 20 https://hls-player.giorgi.app/ -o /dev/null
