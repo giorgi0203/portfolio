@@ -1,5 +1,7 @@
 # Google Analytics and SEO setup
 
+The main portfolio is configured with public measurement ID `G-VWCF70ZQWB`. Collection requires visitor consent. Confirm actual reporting in GA Realtime; automated checks stub the Google script.
+
 ## Account steps
 
 1. Sign in at https://analytics.google.com/ using the Google account that should own the reports. Create an Analytics account and GA4 property named giorgi.app. Select Tbilisi as the reporting timezone and the currency you want for reports.
@@ -22,4 +24,4 @@ The homepage has a descriptive title, description, canonical URL, social preview
 
 The Google tag is disabled while measurementId is empty. Once configured it loads only after opt-in, respects Do Not Track/GPC, sends sanitized page location and outgoing hostnames, and does not send form contents or URL query/hash values in its manually configured events. Choice can be changed in the footer. Revocation disables the tag, clears its host-only cookies and reloads. GA cookies are configured for 90 days. The pre-existing cookie-free aggregate analytics remains independent.
 
-Checks: portfolio lint/unit/build plus scripts/seo-analytics-browser.cjs. The Google script is stubbed in automated tests; verify actual GA reporting using the owner's real property after the ID is configured. No real GA data collection is claimed before that step.
+Checks: portfolio lint/unit/build plus scripts/seo-analytics-browser.cjs. The Google script is stubbed in automated tests; verify actual GA reporting using the owner's real property after the ID is configured. Automated checks confirm configuration and consent behavior, not receipt of events by Google.
