@@ -298,14 +298,18 @@
         <p class="eyebrow">GOOD THINGS START WITH A “WHAT IF”</p>
         <h2>Got a weird idea?<br /><em>I like those.</em></h2>
       </div>
-      <a
-        href="https://github.com/giorgi0203"
-        class="button button-lime"
-        target="_blank"
-        rel="noopener noreferrer"
-        >Find me on GitHub
-        <svg class="icon" aria-hidden="true"><use href="#i-up-right" /></svg
-      ></a>
+      <p class="contact-intro">Need a hand building a website, a useful little app, or something wonderfully random? Tell me what you have in mind.</p>
+    </div>
+    <div class="contact-layout">
+      <aside class="contact-socials"><span class="eyebrow">FIND ME AROUND THE INTERNET</span><nav aria-label="Social profiles">@for (social of socials; track social.name) {<a [href]="social.url" target="_blank" rel="noopener noreferrer"><span class="social-mark" aria-hidden="true">{{ social.mark }}</span>{{ social.name }}<span aria-hidden="true">↗</span></a>}</nav><p>Small ideas welcome.<br />Cat approval is optional.</p></aside>
+      <form class="contact-form" #enquiry="ngForm" (ngSubmit)="sendMessage()">
+        <div class="contact-fields"><label for="contact-name">Your name<input id="contact-name" name="name" [(ngModel)]="contact.name" required maxlength="80" autocomplete="name" placeholder="What should I call you?" [disabled]="sending" /></label><label for="contact-email">Email address<input id="contact-email" name="email" [(ngModel)]="contact.email" type="email" email required maxlength="254" autocomplete="email" placeholder="you@example.com" [disabled]="sending" /></label></div>
+        <label for="contact-message">What are we building?<textarea id="contact-message" name="message" [(ngModel)]="contact.message" required minlength="10" maxlength="5000" rows="5" placeholder="The idea, the problem, the wild plan… I’m listening." [disabled]="sending"></textarea></label>
+        <label class="contact-trap" aria-hidden="true">Website<input name="website" [(ngModel)]="contact.website" tabindex="-1" autocomplete="off" /></label>
+        <div class="contact-submit"><span>I’ll use your email to reply to your enquiry.</span><button class="button button-lime" type="submit" [disabled]="sending || enquiry.invalid">@if (sending) {<span class="contact-spinner" aria-hidden="true"></span> Sending…} @else {Send my idea <span aria-hidden="true">↗</span>}</button></div>
+        @if (contactSuccess) {<p class="contact-result success" role="status">{{ contactSuccess }}</p>}
+        @if (contactError) {<p class="contact-result error" role="alert">{{ contactError }} Your message stays here so you can retry.</p>}
+      </form>
     </div>
     <div class="footer-bottom">
       <a href="#main" class="footer-brand"
