@@ -36,8 +36,8 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/2bc56ff5d7d79a8279296b592e4ffd1700038c1d/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '7272138dbdc41e4a56c2a6c1975d937d857eb9770e3b0c3e883758e73c91290c' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/835f5f355692405b325cbe47b508158346754bff/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '7eab48398a354b10f96160fa7c52535fa19bd25bcb84061d5e173389e0e5aa2d' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
@@ -52,6 +52,8 @@ jobs:
             try{
               const page=await browser.newPage({viewport:{width:1440,height:1000}});
               page.setDefaultTimeout(45000);
+              let googleLoads=0;
+              await page.route('https://www.googletagmanager.com/**',route=>{googleLoads++;return route.fulfill({contentType:'application/javascript',body:'window.__googleConsentTest=true;'});});
               await page.goto('https://giorgi.app/',{waitUntil:'domcontentloaded'});
               await page.getByRole('button',{name:'Owner sign-in',exact:false}).waitFor();
               assert.equal(await page.locator('[data-app-card]').count(),5);
@@ -62,12 +64,18 @@ jobs:
               await page.getByRole('button',{name:'Close sign-in',exact:true}).click();
               await page.setViewportSize({width:390,height:844});
               assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+              assert.equal(googleLoads,0);
+              await page.getByRole('button',{name:'Allow Google Analytics',exact:true}).click();
+              await page.waitForFunction(()=>window.__googleConsentTest);
+              assert.equal(googleLoads,1);
+              assert.ok(await page.evaluate(()=>window.dataLayer.some(command=>command[0]==='config'&&command[1]==='G-VWCF70ZQWB')));
+              console.log('PASS live GA consent and configured property (Google script stubbed)');
               console.log('PASS live five-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
           })().catch(error=>{console.error(error);process.exitCode=1;});
           JS
 
-      - name: Verify public SEO assets and inactive GA configuration
+      - name: Verify public SEO assets and configured GA property
         run: |
           node <<'JS'
           const assert=require('node:assert/strict');
@@ -81,7 +89,7 @@ jobs:
             assert.ok((await (await fetch('https://giorgi.app/robots.txt')).text()).includes('Sitemap: https://giorgi.app/sitemap.xml'));
             assert.ok((await (await fetch('https://giorgi.app/sitemap.xml')).text()).includes('<loc>https://giorgi.app/</loc>'));
             assert.ok((await (await fetch('https://giorgi.app/privacy.html')).text()).includes('Optional Google Analytics'));
-            const config=await (await fetch('https://giorgi.app/analytics-config.json')).json();assert.equal(config.measurementId,'');
-            console.log('PASS public SEO metadata, initial HTML, schema, robots/sitemap/privacy; GA awaiting owner measurement ID');
+            const config=await (await fetch('https://giorgi.app/analytics-config.json')).json();assert.equal(config.measurementId,'G-VWCF70ZQWB');
+            console.log('PASS public SEO metadata, initial HTML, schema, robots/sitemap/privacy; GA configured for G-VWCF70ZQWB');
           })().catch(error=>{console.error(error);process.exitCode=1});
           JS
