@@ -1,0 +1,141 @@
+<div
+  #sprite
+  class="cat-sprite"
+  data-cat-sidekick
+  data-cat-sprite
+  data-state="resting"
+  data-surface="dock"
+  data-motion="full"
+  aria-hidden="true"
+>
+  <span class="cat-whisper"
+    ><span class="awake-message">on pawtrol.</span
+    ><span class="sleep-message">z z z</span></span
+  >
+  <svg
+    class="cat-drawing"
+    viewBox="0 0 140 154"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <ellipse
+      class="cat-shadow"
+      cx="72"
+      cy="150"
+      rx="44"
+      ry="3"
+      fill="#26352d"
+      opacity=".13"
+    />
+    <g
+      class="cat-body"
+      stroke="#27352e"
+      stroke-width="2.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <g class="cat-tail" fill="none">
+        <path
+          d="M91 131C125 137 141 111 128 88C121 76 115 84 119 93"
+          stroke-width="17"
+        />
+        <path
+          d="M91 131C125 137 141 111 128 88C121 76 115 84 119 93"
+          stroke="#424841"
+          stroke-width="11"
+        />
+        <path d="M126 85Q115 77 119 93" stroke="#fffdf5" stroke-width="10" />
+      </g>
+      <path
+        d="M48 88C31 104 34 130 39 142Q71 151 102 141C108 120 102 99 88 87Z"
+        fill="#424841"
+      />
+      <path
+        d="M58 91Q74 101 85 91C90 106 94 128 87 145H54C49 127 49 107 58 91Z"
+        fill="#fffdf5"
+      />
+      <path d="M41 131Q29 137 34 148H58Q61 135 50 133" fill="#424841" />
+      <path d="M91 131Q106 130 107 148H85Q81 137 91 131Z" fill="#424841" />
+      <g class="cat-face">
+        <path
+          d="M35 62L31 23Q33 17 38 22L58 39Q74 34 90 39L109 20Q114 17 114 24L111 66C121 88 106 108 75 109C41 109 22 90 35 62Z"
+          fill="#fffdf5"
+        />
+        <path
+          d="M35 63L31 23Q33 17 38 22L58 39Q65 37 70 38L60 62L48 79L33 77Q29 72 35 63Z"
+          fill="#424841"
+        />
+        <path
+          d="M78 38L90 39L109 20Q114 17 114 24L111 66Q116 75 114 81L96 76L86 62Z"
+          fill="#424841"
+        />
+        <path d="M38 32L42 54L53 44Z" fill="#db9f9a" stroke-width="1.6" />
+        <path d="M106 31L95 44L107 55Z" fill="#db9f9a" stroke-width="1.6" />
+        <path d="M67 44L58 70Q70 77 85 69L77 44" fill="#fffdf5" stroke="none" />
+        <g class="awake-eyes">
+          <ellipse cx="51" cy="75" rx="12" ry="13" fill="#ced88d" />
+          <ellipse cx="94" cy="75" rx="12" ry="13" fill="#ced88d" />
+          <g class="cat-pupil" stroke="none" fill="#27352e">
+            <ellipse cx="52" cy="76" rx="5" ry="8" />
+            <ellipse cx="93" cy="76" rx="5" ry="8" />
+            <circle cx="54" cy="72" r="2.3" fill="#fffdf5" />
+            <circle cx="95" cy="72" r="2.3" fill="#fffdf5" />
+          </g>
+        </g>
+        <path
+          class="sleep-eyes"
+          d="M41 77Q51 86 61 77M84 77Q94 86 104 77"
+          fill="none"
+        />
+        <ellipse
+          cx="49"
+          cy="92"
+          rx="7"
+          ry="3"
+          fill="#e5b4a5"
+          stroke="none"
+          opacity=".55"
+        />
+        <ellipse
+          cx="96"
+          cy="92"
+          rx="7"
+          ry="3"
+          fill="#e5b4a5"
+          stroke="none"
+          opacity=".55"
+        />
+        <path d="M67 88Q73 85 79 88L73 94Z" fill="#d39a93" stroke-width="1.7" />
+        <path
+          d="M73 94V97M73 97Q68 102 63 97M73 97Q78 102 83 97"
+          fill="none"
+          stroke-width="1.8"
+        />
+        <g fill="none" stroke-width="1.5">
+          <path d="M44 91L22 86M43 97L20 99M102 91L125 86M103 97L127 100" />
+        </g>
+      </g>
+      <g class="cat-paws" fill="#fffdf5">
+        <path class="cat-left-paw" d="M56 118L53 140Q47 143 50 151H68L69 123" />
+        <path
+          class="cat-right-paw"
+          d="M79 123L80 151H98Q101 143 92 140L89 117"
+        />
+        <g stroke-width="1.4">
+          <path d="M56 146V151M61 146V151M85 146V151M90 146V151" />
+        </g>
+      </g>
+    </g>
+  </svg>
+</div>
+<div class="cat-controls">
+  <span><span aria-hidden="true">✧</span> Chief Distraction Officer</span>
+  <button
+    type="button"
+    class="cat-toggle"
+    [attr.aria-pressed]="!paused()"
+    (click)="toggle()"
+  >
+    Cat: {{ paused() ? 'play' : 'pause' }}
+    <span aria-hidden="true">{{ paused() ? '▷' : 'Ⅱ' }}</span>
+  </button>
+</div>

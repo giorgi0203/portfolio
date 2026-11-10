@@ -1,0 +1,240 @@
+:host {
+  display: block;
+  background: #252a20;
+  color: #bdc6b0;
+}
+.cat-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  font: 11px var(--mono, monospace);
+}
+.cat-controls > span > span {
+  color: #d1e78c;
+  margin-right: 5px;
+}
+.cat-toggle {
+  border: 1px solid #6a775b;
+  border-radius: 100px;
+  background: #323c2b;
+  color: #e2e8d6;
+  padding: 9px 14px;
+  min-height: 36px;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cat-toggle:hover {
+  background: #45533b;
+}
+.cat-toggle:focus-visible {
+  outline: 3px solid #d1e78c;
+  outline-offset: 4px;
+}
+@media (min-width: 900px) {
+  .cat-controls {
+    position: fixed;
+    top: 104px;
+    right: 22px;
+    z-index: 40;
+    padding: 0;
+  }
+  .cat-controls > span {
+    display: none;
+  }
+  .cat-toggle {
+    background: #f8f6efed;
+    border-color: #c5cbb5;
+    color: #526044;
+    font-size: 10px;
+    box-shadow: 0 2px 6px #27352e08;
+  }
+  .cat-toggle:hover {
+    background: #e8edda;
+  }
+}
+.cat-sprite {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 118px;
+  height: 130px;
+  z-index: 35;
+  pointer-events: none !important;
+  user-select: none;
+  --look-x: 0px;
+  --look-y: 0px;
+  --jump-tilt: 0deg;
+  will-change: transform;
+}
+.cat-sprite[hidden] {
+  display: none;
+}
+.cat-drawing {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(var(--jump-tilt));
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 2px 1px #27352e10);
+}
+.cat-body {
+  transform-origin: 70px 149px;
+  animation: cat-breathe 4s ease-in-out infinite;
+}
+.cat-tail {
+  transform-origin: 94px 132px;
+  animation: cat-tail 4.8s ease-in-out infinite;
+}
+.awake-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cat-blink 7s infinite;
+}
+.cat-pupil {
+  transform: translate(var(--look-x), var(--look-y));
+}
+.sleep-eyes {
+  display: none;
+}
+.cat-whisper {
+  position: absolute;
+  top: -13px;
+  left: 15px;
+  padding: 4px 9px;
+  background: #fffdf5;
+  border: 1px solid #c5cbb5;
+  border-radius: 10px 10px 2px 10px;
+  color: #526044;
+  font: 9px var(--mono, monospace);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.sleep-message {
+  display: none;
+}
+.cat-sprite[data-state='sleeping'] .cat-whisper {
+  opacity: 1;
+}
+.cat-sprite[data-state='sleeping'] .awake-message {
+  display: none;
+}
+.cat-sprite[data-state='sleeping'] .sleep-message {
+  display: inline-block;
+  animation: cat-zzz 3s ease-in-out infinite;
+}
+.cat-sprite[data-state='sleeping'] .awake-eyes {
+  display: none;
+}
+.cat-sprite[data-state='sleeping'] .sleep-eyes {
+  display: block;
+}
+.cat-sprite[data-state='sleeping'] .cat-face {
+  transform: translateY(4px) rotate(4deg);
+  transform-origin: 70px 100px;
+}
+.cat-sprite[data-state='sleeping'] .cat-tail {
+  animation-duration: 9s;
+}
+.cat-sprite[data-state='crouching'] .cat-body {
+  animation: cat-wiggle 0.16s ease-in-out infinite;
+  transform-origin: 70px 149px;
+}
+.cat-sprite[data-state='crouching'] .cat-tail {
+  transform: rotate(-15deg);
+  animation: none;
+}
+.cat-sprite[data-state='jumping'] .cat-body {
+  animation: none;
+  transform: scaleX(1.08) scaleY(0.91);
+}
+.cat-sprite[data-state='jumping'] .cat-left-paw {
+  transform: translate(-5px, -5px) rotate(5deg);
+  transform-origin: 61px 122px;
+}
+.cat-sprite[data-state='jumping'] .cat-right-paw {
+  transform: translate(5px, -9px) rotate(-7deg);
+  transform-origin: 84px 122px;
+}
+.cat-sprite[data-state='jumping'] .cat-tail {
+  animation: none;
+  transform: rotate(12deg);
+}
+.cat-sprite[data-state='jumping'] .cat-shadow {
+  opacity: 0;
+}
+.cat-sprite[data-state='paused'] .cat-body,
+.cat-sprite[data-state='paused'] .cat-tail,
+.cat-sprite[data-state='paused'] .awake-eyes {
+  animation: none;
+}
+.cat-sprite[data-motion='touch'] {
+  width: 86px;
+  height: 95px;
+}
+.cat-sprite[data-motion='reduced'] *,
+.cat-sprite[data-motion='touch'] * {
+  animation: none !important;
+  transition: none !important;
+}
+@keyframes cat-tail {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+@keyframes cat-breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.984);
+  }
+}
+@keyframes cat-blink {
+  0%,
+  43%,
+  47%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes cat-wiggle {
+  0%,
+  100% {
+    transform: translateX(-1px) scaleY(0.86) scaleX(1.08);
+  }
+  50% {
+    transform: translateX(1px) scaleY(0.83) scaleX(1.09);
+  }
+}
+@keyframes cat-zzz {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cat-sprite * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
