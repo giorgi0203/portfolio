@@ -1,0 +1,29 @@
+name: Verify live experiment apps
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/extra-apps-verify.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5d64e8ddb3ede7fcff5e257e18514d43f48fa026
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check the actual editor, examples, API docs and developer pages
+        env:
+          COMPILER_UI_URL: https://angular-compiler.giorgi.app/
+          EXAMPLE_URL: https://example-mcp.giorgi.app
+          GATEWAY_URL: https://mcp.giorgi.app
+          CATALOG_URL: https://api.giorgi.app
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          PLAYWRIGHT_MODULE="$RUNNER_TEMP/browser/node_modules/playwright" node scripts/check-compiler-browser.cjs
