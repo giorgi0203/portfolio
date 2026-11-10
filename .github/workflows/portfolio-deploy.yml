@@ -36,8 +36,8 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/b4ba27b0636f6298a63e1812fd26b11f33838a88/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'd796859367d99fd07a3ff80ba44ace729d6ed12743087676856a623ab468fed0' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/2bc56ff5d7d79a8279296b592e4ffd1700038c1d/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '7272138dbdc41e4a56c2a6c1975d937d857eb9770e3b0c3e883758e73c91290c' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
@@ -65,4 +65,23 @@ jobs:
               console.log('PASS live five-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
           })().catch(error=>{console.error(error);process.exitCode=1;});
+          JS
+
+      - name: Verify public SEO assets and inactive GA configuration
+        run: |
+          node <<'JS'
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const html=await (await fetch('https://giorgi.app/')).text();
+            assert.ok(html.includes('rel="canonical" href="https://giorgi.app/"'));
+            assert.ok(html.includes('property="og:image"'));
+            const schema=JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
+            assert.ok(schema['@graph'].some(value=>value['@type']==='Person'));
+            assert.ok(html.includes('interactive Angular lessons'));
+            assert.ok((await (await fetch('https://giorgi.app/robots.txt')).text()).includes('Sitemap: https://giorgi.app/sitemap.xml'));
+            assert.ok((await (await fetch('https://giorgi.app/sitemap.xml')).text()).includes('<loc>https://giorgi.app/</loc>'));
+            assert.ok((await (await fetch('https://giorgi.app/privacy.html')).text()).includes('Optional Google Analytics'));
+            const config=await (await fetch('https://giorgi.app/analytics-config.json')).json();assert.equal(config.measurementId,'');
+            console.log('PASS public SEO metadata, initial HTML, schema, robots/sitemap/privacy; GA awaiting owner measurement ID');
+          })().catch(error=>{console.error(error);process.exitCode=1});
           JS
