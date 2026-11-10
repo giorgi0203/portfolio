@@ -194,3 +194,5 @@
   min-height: 42px;
   min-width: 42px;
 }
+
+.owner-entry{display:block;margin:0;width:100%;padding:12px;border:0;background:#252a20;color:#adb59b;font-size:11px;cursor:pointer}.owner-entry kbd{margin-left:8px;font:inherit;border:1px solid #626b54;border-radius:4px;padding:2px 5px}.owner-dialog{border:0;border-radius:18px;padding:0;width:min(480px,calc(100vw - 28px));max-height:94dvh;background:#f6f7f4;color:#24332d;box-shadow:0 30px 100px #0005}.owner-dialog::backdrop{background:#172017a6;backdrop-filter:blur(5px)}.owner-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #dfe5d8}.owner-dialog h2{font-size:15px;font-weight:600;margin:0}.owner-dialog header button{border:0;background:none;font-size:24px;cursor:pointer;color:inherit}.owner-dialog iframe{display:block;border:0;width:100%;height:640px;max-height:calc(90dvh - 100px)}.owner-dialog>p{margin:0;padding:12px;text-align:center;font-size:11px}.owner-dialog>p>a{color:#527b68}

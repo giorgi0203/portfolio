@@ -81,3 +81,10 @@
   </nav>
 </header>
 <router-outlet></router-outlet>
+
+<button class="owner-entry" type="button" (click)="openOwnerLogin()">Owner sign-in <kbd>⌘ .</kbd></button>
+<dialog #ownerDialog class="owner-dialog" aria-labelledby="owner-title" (close)="loginOpen=false">
+  <header><h2 id="owner-title">Your Giorgi account</h2><button type="button" aria-label="Close sign-in" (click)="closeOwnerLogin()">×</button></header>
+  @if (loginOpen) {<iframe #identityFrame [src]="authEmbed" title="Giorgi account sign-in" referrerpolicy="strict-origin"></iframe>}
+  <p><a href="https://auth.giorgi.app/?continue=/analytics">Open sign-in in a full page</a></p>
+</dialog>
