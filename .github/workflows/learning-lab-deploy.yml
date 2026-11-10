@@ -26,10 +26,10 @@ jobs:
             stage=/var/tmp/giorgi-learning-${{ github.sha }}
             mkdir -p "$stage"
             trap 'rm -rf -- "$stage"' EXIT
-            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/12b2b75028fdb5ef6096a54a378a7eccd60d9059/learning-lab-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' '5057487efb5b732184e117f5288eef4f79f69145073812303d9ae8092150da20' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/906b2e46c04092c8570e99c21705d9cce3c4e4b8/learning-lab-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'f196bcf4a4f8b4d2ebb5823b09075a32cdf3ad98092e27d82436c5810a9bd33a' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n bash "$stage/deploy/install-learning-lab.sh" "$stage" 9f4735da84f623fb7e38223bdf2d15c249ed289d
+            sudo -n bash "$stage/deploy/install-learning-lab.sh" "$stage" 17dab5e46f57c6293b161560c32cae316ec274eb
   browser:
     needs: deploy
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 9f4735da84f623fb7e38223bdf2d15c249ed289d
+          ref: 17dab5e46f57c6293b161560c32cae316ec274eb
       - uses: actions/setup-node@v4
         with:
           node-version: 24
