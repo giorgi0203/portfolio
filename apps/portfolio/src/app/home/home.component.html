@@ -141,7 +141,7 @@
             [href]="project.liveUrl"
             [attr.aria-label]="'Preview ' + project.title"
           >
-            @if (project.category === 'play') {
+            @if (project.id === 1) {
               <div class="mini-player" aria-hidden="true">
                 <div class="mini-window-top">
                   <span></span><span></span><span></span
@@ -164,7 +164,7 @@
               <span class="preview-sticker" aria-hidden="true"
                 >▶ GOOD DISTRACTION</span
               >
-            } @else {
+            } @else if (project.id === 2) {
               <div class="mini-todo" aria-hidden="true">
                 <div class="todo-window-top">
                   <span>today, probably.</span><span>↗</span>
@@ -186,6 +186,9 @@
               <span class="preview-sticker" aria-hidden="true"
                 >✓ USEFUL-ISH</span
               >
+            } @else {
+              <img class="developer-preview" [src]="project.imageUrl" [alt]="project.title + ' experiment preview'" loading="lazy" />
+              <span class="preview-sticker" aria-hidden="true">&lt;/&gt; MADE TO TINKER</span>
             }
           </a>
           <div class="project-body">

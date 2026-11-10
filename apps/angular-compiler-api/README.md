@@ -12,13 +12,13 @@ A minimal Node.js microservice that exposes an HTTP API to compile user-provided
 
 - Input size limited to 200KB
 - Compilation timeout: 10 seconds
-- Compilation runs in isolated child process
-- CORS restricted to `http://localhost:4200`
-- Input validation prevents path traversal
+- Compilation runs in a child process without executing user code
+- CORS permits the deployed compiler and listed local development origins
+- Compiler file reads are restricted to the temporary project and installed libraries
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 24+
 - Angular dependencies installed in workspace root
 
 ## Running the Server
@@ -209,7 +209,7 @@ export class MyComponent {
 │  │  - Runs in isolated child_process                    │   │
 │  │  - Uses @angular/compiler-cli                        │   │
 │  │  - 10 second timeout                                 │   │
-│  │  - 512MB memory limit                                │   │
+│  │  - 192MB worker heap limit                                │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
 │  Temp Project Structure:                                    │
@@ -238,9 +238,13 @@ export class MyComponent {
 - Check for infinite loops in component code
 
 ### "CORS not allowed"
-- The API only accepts requests from localhost:4200
+- The API accepts the deployed Angular compiler origin and listed localhost origins
 - For other origins, update `allowedOrigins` in main.ts
 
 ### Worker errors
 - Ensure `@angular/compiler-cli` is installed
 - Check that TypeScript version is compatible with Angular version
+
+## Deployed playground
+
+https://angular-compiler.giorgi.app/ serves the UI and API on the same origin. It uses the pinned Angular 21 compiler; a version hint does not install another compiler. The standalone service and production-only dependencies are packaged before deployment. See [deployment notes](../../docs/EXTRA_APPS_DEPLOYMENT.md) for service limits and checks.

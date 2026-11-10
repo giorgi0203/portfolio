@@ -1,5 +1,4 @@
 /* You can add global styles to this file, and also import other style files */
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
 
 html, body {
   height: 100%;
@@ -9,3 +8,5 @@ html, body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+
+@media(max-width:900px){html,body{height:auto;overflow:auto}}

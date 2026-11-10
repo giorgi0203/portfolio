@@ -25,7 +25,7 @@ describe('Personal workshop', () => {
     expect(page.querySelector('.hero-portrait')?.getAttribute('alt')).toContain(
       'Giorgi',
     );
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(2);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(6);
   });
 
   it('filters the drawer to useful apps', () => {
@@ -41,7 +41,7 @@ describe('Personal workshop', () => {
       page.querySelector('[aria-label="Open Smart Todo List"]'),
     ).not.toBeNull();
     expect(page.querySelector('[aria-label="Open HLS Player"]')).toBeNull();
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(1);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(5);
   });
 
   it('offers another idea for a future project', () => {

@@ -68,6 +68,10 @@ export class DemoComponent {
   serverStatus = signal<'checking' | 'online' | 'offline'>('checking');
 
   constructor() {
+    if(typeof navigator!=='undefined'&&navigator.doNotTrack!=='1'&&!(navigator as Navigator & {globalPrivacyControl?:boolean}).globalPrivacyControl){
+      let referrer='';try{referrer=new URL(document.referrer).hostname;}catch{ /* Direct visit. */ }
+      void fetch('/api/analytics/event',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'pageview',label:'home',referrer}),keepalive:true}).catch(()=>undefined);
+    }
     this.checkServerStatus();
   }
 

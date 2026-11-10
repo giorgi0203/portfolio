@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, map, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError, timeout } from 'rxjs';
 import type {
   CompileRequest,
   CompileResponse,
@@ -40,7 +40,7 @@ export class CompilerApiService {
   private readonly http = inject(HttpClient);
 
   /** Compiler API base URL */
-  private readonly apiUrl = 'http://localhost:3001/api';
+  private readonly apiUrl = '/api';
 
   /**
    * Compile Angular component source code to Ivy AOT output
@@ -59,6 +59,7 @@ export class CompilerApiService {
     };
 
     return this.http.post<CompileResponse>(`${this.apiUrl}/compile`, request).pipe(
+      timeout(20000),
       map((response) => this.mapResponse(response)),
       catchError((error) => this.handleError(error))
     );
@@ -69,7 +70,7 @@ export class CompilerApiService {
    */
   healthCheck(): Observable<boolean> {
     return this.http
-      .get<{ status: string }>(`${this.apiUrl.replace('/api', '')}/health`)
+      .get<{ status: string }>('/health')
       .pipe(
         map((response) => response.status === 'healthy'),
         catchError(() => [false])
@@ -117,7 +118,7 @@ export class CompilerApiService {
       errorMessage = `Client error: ${error.error.message}`;
     } else if (error.status === 0) {
       errorMessage =
-        'Unable to connect to compiler API. Is the server running on port 3001?';
+        'The compiler is unavailable. Please try again shortly.';
     } else if (error.error?.diagnostics) {
       return throwError(
         () =>

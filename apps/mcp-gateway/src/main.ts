@@ -27,6 +27,7 @@
  */
 
 import * as http from 'http';
+import { serviceLanding } from 'shared-types';
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ interface McpBackend {
 const backends: Record<string, McpBackend> = {
   example: {
     name: 'example-mcp',
-    url: 'http://localhost:3100',
+    url: process.env.EXAMPLE_MCP_URL || 'http://127.0.0.1:3331',
     description: 'Calculator, datetime, and Nx project tools',
   },
   // Add more backends:
@@ -64,53 +65,16 @@ const GATEWAY_PORT = parseInt(process.env['MCP_GATEWAY_PORT'] || '3200', 10);
 /**
  * Forward an HTTP request to a backend MCP server.
  */
-async function proxyRequest(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  backend: McpBackend,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Read the incoming body
-    const bodyChunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => bodyChunks.push(chunk));
-    req.on('end', () => {
-      const body = Buffer.concat(bodyChunks);
-      const targetUrl = new URL('/mcp', backend.url);
-
-      const proxyReq = http.request(
-        targetUrl,
-        {
-          method: req.method,
-          headers: {
-            ...req.headers,
-            host: targetUrl.host,
-            'content-length': String(body.length),
-          },
-        },
-        (proxyRes) => {
-          // Copy status and headers from backend
-          res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
-          proxyRes.pipe(res);
-          proxyRes.on('end', resolve);
-        },
-      );
-
-      proxyReq.on('error', (err) => {
-        console.error(`Proxy error for ${backend.name}:`, err.message);
-        res.writeHead(502, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          error: 'Bad Gateway',
-          message: `Backend ${backend.name} at ${backend.url} is unavailable`,
-        }));
-        resolve();
-      });
-
-      proxyReq.write(body);
-      proxyReq.end();
-    });
-
-    req.on('error', reject);
-  });
+function proxyRequest(req:http.IncomingMessage,res:http.ServerResponse,backend:McpBackend):void {
+  if(Number(req.headers['content-length']||0)>200*1024){res.writeHead(413);res.end('Request exceeds 200 KB');return;}
+  const target=new URL('/mcp',backend.url);
+  const headers={...req.headers,host:target.host};delete headers.connection;
+  const upstream=http.request(target,{method:req.method,headers},response=>{res.writeHead(response.statusCode||502,response.headers);response.pipe(res);});
+  upstream.setTimeout(60000,()=>upstream.destroy(new Error('Backend timed out')));
+  upstream.on('error',()=>{if(!res.headersSent){res.writeHead(502,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'MCP backend unavailable. Please retry shortly.'}));}else res.end();});
+  req.on('aborted',()=>upstream.destroy());res.on('close',()=>upstream.destroy());
+  let size=0;req.on('data',chunk=>{size+=chunk.length;if(size>200*1024){if(!res.headersSent){res.writeHead(413);res.end('Request exceeds 200 KB');}upstream.destroy();}});
+  req.pipe(upstream);
 }
 
 // ─── HTTP Server ────────────────────────────────────────────────────────────
@@ -119,7 +83,7 @@ const server = http.createServer(async (req, res) => {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id, MCP-Protocol-Version');
   res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id');
 
   if (req.method === 'OPTIONS') {
@@ -128,7 +92,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const url = req.url || '/';
+  const url = new URL(req.url || '/', 'http://localhost').pathname;
 
   // ── Health / discovery ─────────────────────────────────────
   if (url === '/health') {
@@ -136,7 +100,8 @@ const server = http.createServer(async (req, res) => {
     const checks = await Promise.allSettled(
       Object.entries(backends).map(async ([key, backend]) => {
         try {
-          const healthRes = await fetch(`${backend.url}/health`);
+          const healthRes = await fetch(`${backend.url}/health`,{signal:AbortSignal.timeout(3000)});
+          if(!healthRes.ok)throw new Error('Unhealthy backend');
           const data = await healthRes.json();
           return { key, name: backend.name, status: 'up', data };
         } catch {
@@ -149,9 +114,10 @@ const server = http.createServer(async (req, res) => {
       c.status === 'fulfilled' ? c.value : { status: 'error' },
     );
 
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    const healthy=results.every(result=>'status' in result&&result.status==='up');
+    res.writeHead(healthy?200:503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      gateway: 'ok',
+      gateway: healthy?'ok':'degraded',
       backends: results,
     }, null, 2));
     return;
@@ -172,7 +138,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Route: /mcp/:backendKey → proxy to backend ─────────────
-  const mcpMatch = url.match(/^\/mcp\/([^/]+)(\/.*)?$/);
+  const mcpMatch = url.match(/^\/mcp\/([^/]+)$/);
   if (mcpMatch) {
     const backendKey = mcpMatch[1];
     const backend = backends[backendKey];
@@ -186,11 +152,12 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    await proxyRequest(req, res, backend);
+    proxyRequest(req, res, backend);
     return;
   }
 
   // ── Root ────────────────────────────────────────────────────
+  if (url === '/' && req.headers.accept?.includes('text/html')) {res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(serviceLanding('MCP Gateway','A single entry point for registered MCP services. Discover backends at /servers and check their health before connecting.','/mcp/example'));return;}
   if (url === '/') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -209,7 +176,7 @@ const server = http.createServer(async (req, res) => {
   res.end('Not found');
 });
 
-server.listen(GATEWAY_PORT, () => {
+server.listen(GATEWAY_PORT,process.env.HOST || '127.0.0.1', () => {
   console.log(`\nMCP Gateway running on http://localhost:${GATEWAY_PORT}`);
   console.log(`\nRegistered backends:`);
   for (const [key, b] of Object.entries(backends)) {

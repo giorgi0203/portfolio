@@ -35,6 +35,7 @@ export function getTsConfigJson(nodeModulesPath: string): string {
           'zone.js': [`${nmPath}/zone.js`],
           'zone.js/*': [`${nmPath}/zone.js/*`],
         },
+        types: [],
         typeRoots: [`${nmPath}/@types`],
       },
       angularCompilerOptions: {
@@ -53,11 +54,13 @@ export function getTsConfigJson(nodeModulesPath: string): string {
   );
 }
 
-export function getMainTs(): string {
+export function getMainTs(source: string): string {
+  const name = /@Component\s*\(/.test(source) ? source.match(/export\s+class\s+([A-Za-z_$][\w$]*)/)?.[1] : 'DemoComponent';
+  if(!name) throw new Error('Export a named standalone component class to compile.');
   return `import { bootstrapApplication } from '@angular/platform-browser';
-import { DemoComponent } from './app/demo.component';
+import { ${name} } from './app/demo.component';
 
-bootstrapApplication(DemoComponent).catch(err => console.error(err));
+bootstrapApplication(${name}).catch(err => console.error(err));
 `;
 }
 
@@ -68,8 +71,7 @@ export function getComponentTs(
 ): string {
   // If user provides full component source, use it directly
   if (
-    componentSource.includes('@Component') ||
-    componentSource.includes('import')
+    /@Component\s*\(/.test(componentSource)
   ) {
     return componentSource;
   }

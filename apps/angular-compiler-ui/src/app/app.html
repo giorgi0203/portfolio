@@ -1,10 +1,11 @@
 <div class="app-container">
   <!-- Header -->
   <header class="header">
-    <h1>🅰️ Angular AOT Compiler</h1>
+    <h1>🅰️ Angular AOT Compiler</h1><a class="home-link" href="https://giorgi.app/">← Giorgi’s apps</a>
     <div class="server-status" [class]="serverStatus()">
       <span class="status-dot"></span>
       <span>{{ serverStatus() === 'checking' ? 'Checking...' : serverStatus() === 'online' ? 'Server Online' : 'Server Offline' }}</span>
+      @if(serverStatus()==='offline'){<button (click)="checkServerStatus()">Retry connection</button>}
     </div>
   </header>
 

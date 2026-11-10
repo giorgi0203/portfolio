@@ -15,7 +15,7 @@ export class AnalyticsService {
     document.addEventListener('click',event=>{
       const anchor=(event.target as Element|null)?.closest('a[href]');if(!anchor)return;
       try{const host=new URL((anchor as HTMLAnchorElement).href).hostname;
-        if(['hls-player.giorgi.app','smart-todolist.giorgi.app','www.facebook.com','www.linkedin.com','github.com','www.instagram.com'].includes(host))send('outbound',host);
+        if(['angular-compiler.giorgi.app','example-mcp.giorgi.app','mcp.giorgi.app','api.giorgi.app','hls-player.giorgi.app','smart-todolist.giorgi.app','www.facebook.com','www.linkedin.com','github.com','www.instagram.com'].includes(host))send('outbound',host);
       }catch{ /* Ignore non-URL links. */ }
     },{capture:true});
   }
