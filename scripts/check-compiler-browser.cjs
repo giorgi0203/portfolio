@@ -5,8 +5,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     const errors = [];
+    page.setDefaultTimeout(60000);
+    page.on('requestfailed',request=>console.log('REQUEST FAILED',new URL(request.url()).origin+new URL(request.url()).pathname,request.failure()?.errorText));
+    page.on('response',response=>{if(response.status()>=400)console.log('HTTP',response.status(),new URL(response.url()).origin+new URL(response.url()).pathname);});
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(process.env.COMPILER_UI_URL || 'http://127.0.0.1:3440/', { waitUntil: 'networkidle' });
+    await page.goto(process.env.COMPILER_UI_URL || 'http://127.0.0.1:3440/', { waitUntil: 'domcontentloaded' });
     await page.getByText('Server Online', { exact: true }).waitFor();
     await page.locator('.input-panel .monaco-editor').first().waitFor();
     for (const name of ['Counter', 'List', 'Form']) {
@@ -24,7 +27,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
     await page.screenshot({ path: '/tmp/angular-compiler-mobile.png', fullPage: true });
     await page.setViewportSize({ width:1440,height:1000 });
     const api=process.env.CATALOG_URL||'http://127.0.0.1:3431';
-    await page.goto(api+'/api/docs',{waitUntil:'networkidle'});
+    await page.goto(api+'/api/docs',{waitUntil:'domcontentloaded'});
     await page.locator('.info .title').waitFor();
     const projects=page.locator('.opblock').filter({hasText:'/api/projects'});
     await projects.locator('.opblock-summary').click();
@@ -33,7 +36,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/codex/runtim
     await projects.getByRole('button',{name:'Execute',exact:true}).click();
     assert.equal((await (await projectResponse).json()).length,6);
     for(const [url,title] of [[process.env.EXAMPLE_URL||'http://127.0.0.1:3411','Example MCP'],[process.env.GATEWAY_URL||'http://127.0.0.1:3421','MCP Gateway']]){
-      await page.goto(url,{waitUntil:'networkidle'});
+      await page.goto(url,{waitUntil:'domcontentloaded'});
       await page.getByRole('heading',{name:title,exact:true}).waitFor();
       assert.match(await page.locator('#config').innerText(),/mcp/);
     }
