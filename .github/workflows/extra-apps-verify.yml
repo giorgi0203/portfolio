@@ -17,6 +17,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Check analytics forwarding for every new host
+        run: |
+          node <<'JS'
+          const assert=require('node:assert/strict');
+          (async()=>{for(const name of ['angular-compiler','example-mcp','mcp','api']){
+            const origin='https://'+name+'.giorgi.app',started=Date.now();
+            const response=await fetch(origin+'/api/analytics/event',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({kind:'pageview',label:'home'}),signal:AbortSignal.timeout(10000)});
+            assert.equal(response.status,200,origin+' analytics status');assert.equal((await response.json()).ok,true);
+            console.log('PASS anonymous analytics forwarding:',name,Date.now()-started,'ms');
+          }})().catch(error=>{console.error(error);process.exitCode=1});
+          JS
       - name: Check the actual editor, examples, API docs and developer pages
         env:
           COMPILER_UI_URL: https://angular-compiler.giorgi.app/
