@@ -1,6 +1,8 @@
-# The illustrated cat
+# The illustrated cat (parked)
 
-The portfolio has one layered, illustrated tabby-and-white cat, modeled after the cat in Giorgi’s portrait. GSAP (pinned in package.json) animates its head, ears, eyes, jaw, paws and segmented tail. The original SVG stays local; no animation CDN, tracking event, or image service is involved.
+The animated sidekick is currently removed from the page. Its implementation is retained for a possible return; it is not mounted and does not run. The cat in the static portrait remains.
+
+The optional component provides one layered, illustrated tabby-and-white cat, modeled after the cat in Giorgi’s portrait. GSAP (pinned in package.json) animates its head, ears, eyes, jaw, paws and segmented tail. The original SVG stays local; no animation CDN, tracking event, or image service is involved.
 
 The cat lives in the document beside the portrait or inside a project preview. Scrolling moves it out of view with its home; it does not follow the viewport. Deliberately hovering over another project invites it to that card. Transfers between visible homes use a short hop; transfers from an offscreen home use a brief fade so it never flies across the full page.
 
@@ -16,4 +18,4 @@ node scripts/cat-sidekick-browser.cjs
 node scripts/seo-analytics-browser.cjs
 ```
 
-The browser checks exercise the production bundle with local fixtures and intercept external requests. They verify actual rig movement, document anchoring, project invitations, activity controls, pause persistence, reduced motion and touch layouts, without submitting messages or sending Google Analytics events. Deployment separately checks the live gallery, cat controls, consent flow, sign-in and SEO assets.
+When the sidekick is enabled, its browser checks exercise the production bundle with local fixtures and intercept external requests. They verify actual rig movement, document anchoring, project invitations, activity controls, pause persistence, reduced motion and touch layouts, without submitting messages or sending Google Analytics events. Deployment separately checks the live gallery, cat controls, consent flow, sign-in and SEO assets.

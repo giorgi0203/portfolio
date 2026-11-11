@@ -1,12 +1,7 @@
-name: Deploy Backend to DigitalOcean
+name: Legacy Backend Deployment (manual only)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/portfolio-api/**'
-      - 'libs/shared-types/**'
-      - '.github/workflows/backend-deploy.yml'
+  # Retired automatic PM2 deployment: the current services use scoped installers.
   workflow_dispatch:
 
 permissions:

@@ -4,11 +4,10 @@ import { AnalyticsService } from './services/analytics.service';
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { deployedApps } from './deployed-apps';
-import { CatSidekickComponent } from './cat-sidekick/cat-sidekick.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterModule, CatSidekickComponent],
+  imports: [RouterModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
