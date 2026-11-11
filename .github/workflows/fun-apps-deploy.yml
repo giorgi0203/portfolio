@@ -1,0 +1,35 @@
+name: Deploy HTTP Playground and Decision Department
+on:
+  push:
+    branches: [codex/http-and-decisions]
+    paths: ['.github/workflows/fun-apps-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-fun-apps-deployment
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Inspect capacity and deployment prerequisites
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            /opt/smart-todo-node-24.22.1/bin/node --version
+            nginx -t
+            certbot --version
+            df -h /var
+            free -m
+            ss -ltn | grep -E ':(3360|3350|3100|3301) ' || true
+            systemctl show giorgi-health -p ActiveState -p MemoryCurrent
+            ls /etc/nginx/sites-enabled/
