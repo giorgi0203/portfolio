@@ -2,7 +2,7 @@ name: Portfolio deployment
 
 on:
   push:
-    branches: [codex/portfolio-subdomains]
+    branches: [codex/portfolio-subdomains, main]
     paths:
       - '.github/workflows/portfolio-deploy.yml'
   workflow_dispatch:
@@ -36,8 +36,8 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/04e35251e1a4c97f946e2dfc2154e5111e35debd/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'e6f05d4f817817f8e42bdfe16e0798714c5974122cff98780e0af7fed2d45982' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/6a3ad7cb472e7033363fc14a05ff78869d4b09de/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'a26f6f86303508fb0f210343af1bed232d6864e01da1c28005eec10e00a3b94e' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
@@ -70,15 +70,8 @@ jobs:
               await page.waitForFunction(()=>window.__googleConsentTest);
               assert.equal(googleLoads,1);
               assert.ok(await page.evaluate(()=>window.dataLayer.some(command=>command[0]==='config'&&command[1]==='G-VWCF70ZQWB')));
-              await page.locator('[data-cat-sprite]').waitFor({state:'visible'});
-              assert.equal(await page.locator('[data-cat-sprite]').evaluate(element=>getComputedStyle(element).pointerEvents),'none');
-              await page.getByRole('button',{name:'Cat: pause',exact:true}).click();
-              assert.equal(await page.locator('[data-cat-sidekick]').getAttribute('data-state'),'paused');
-              await page.getByRole('button',{name:'Cat: play',exact:true}).click();
-              await page.getByRole('button',{name:'Pet the cat',exact:true}).waitFor();
-              await page.getByRole('button',{name:'Play with the cat',exact:true}).waitFor();
-              await page.getByRole('button',{name:'Let the cat nap',exact:true}).waitFor();
-              console.log('PASS live illustrated cat, activity controls, click-through artwork and pause/play');
+              assert.equal(await page.locator('app-cat-sidekick,[data-cat-sprite],.cat-controls').count(),0);
+              console.log('PASS live portfolio without the animated cat');
               console.log('PASS live GA consent and configured property (Google script stubbed)');
               console.log('PASS live five-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
