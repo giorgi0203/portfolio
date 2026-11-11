@@ -20,6 +20,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
+import { serviceLanding } from 'shared-types';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -122,7 +124,7 @@ srv.tool(
   'List all Nx project directories in the monorepo apps/ folder',
   {},
   async () => {
-    const appsDir = path.resolve(__dirname, '../../../apps');
+    const appsDir = path.join(process.env.WORKSPACE_METADATA_DIR || process.cwd(), 'apps');
     let projects: string[] = [];
 
     try {
@@ -188,7 +190,7 @@ srv.resource('system-info', 'system://info', async (uri) => ({
  * Exposes the monorepo package.json as a resource.
  */
 srv.resource('package-json', 'project://package.json', async (uri) => {
-  const pkgPath = path.resolve(__dirname, '../../../package.json');
+  const pkgPath = path.join(process.env.WORKSPACE_METADATA_DIR || process.cwd(), 'package.json');
 
   try {
     const content = fs.readFileSync(pkgPath, 'utf-8');
@@ -281,84 +283,46 @@ async function main() {
     const portArg = args[args.indexOf('--http') + 1];
     const port = portArg && !portArg.startsWith('-') ? parseInt(portArg, 10) : 3100;
 
-    // Map of session ID → transport for stateful connections
-    const transports = new Map<string, StreamableHTTPServerTransport>();
-
-    const httpServer = http.createServer(async (req, res) => {
-      // CORS headers for cross-origin access
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
-      res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id');
-
-      if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end();
-        return;
-      }
-
-      // Health check
-      if (req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', server: 'example-mcp', transport: 'streamable-http' }));
-        return;
-      }
-
-      // MCP endpoint
-      if (req.url === '/mcp') {
-        // Check for existing session
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
-        if (sessionId && transports.has(sessionId)) {
-          // Reuse existing transport for this session
-          const transport = transports.get(sessionId)!;
-          await transport.handleRequest(req, res);
-          return;
+    const sessions = new Map<string,{transport:StreamableHTTPServerTransport;server:McpServer;touched:number}>();
+    const retire = async (id:string)=>{const entry=sessions.get(id);if(!entry)return;sessions.delete(id);await entry.server.close().catch(()=>undefined);};
+    setInterval(()=>{for(const [id,entry] of sessions)if(Date.now()-entry.touched>10*60*1000)void retire(id);},60000).unref();
+    const httpServer = http.createServer(async (req,res)=>{
+      res.setHeader('Access-Control-Allow-Origin','*');
+      res.setHeader('Access-Control-Allow-Methods','GET, POST, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers','Content-Type, mcp-session-id, MCP-Protocol-Version');
+      res.setHeader('Access-Control-Expose-Headers','mcp-session-id');
+      const reply=(status:number,data:unknown)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
+      const pathname=new URL(req.url||'/','http://localhost').pathname;
+      if(req.method==='OPTIONS'){res.writeHead(204);res.end();return;}
+      if(pathname==='/health'){reply(200,{status:'ok',server:'example-mcp',transport:'streamable-http'});return;}
+      if(pathname==='/'&&req.headers.accept?.includes('text/html')){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(serviceLanding('Example MCP','Calculator and date/time tools, project resources, and reusable prompt templates.','/mcp'));return;}
+      if(pathname==='/'){reply(200,{name:'Example MCP',description:'A public calculator, datetime, project metadata, and prompt demo. No AI API calls.',endpoint:'/mcp',usage:'Connect with an MCP client using Streamable HTTP.',source:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/example-mcp'});return;}
+      if(pathname!=='/mcp'){reply(404,{error:'Not found'});return;}
+      try {
+        let body:unknown;
+        if(req.method==='POST'){
+          let length=0;const chunks:Buffer[]=[];
+          for await(const chunk of req){length+=chunk.length;if(length>200*1024){reply(413,{error:'Request exceeds 200 KB'});return;}chunks.push(chunk);}
+          try{body=JSON.parse(Buffer.concat(chunks).toString());}catch{reply(400,{error:'Invalid JSON'});return;}
         }
-
-        if (req.method === 'POST') {
-          // New session — create transport and connect a new server instance
-          const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-          });
-
-          transport.onclose = () => {
-            if (transport.sessionId) {
-              transports.delete(transport.sessionId);
-            }
-          };
-
-          // Each session gets its own MCP server instance
-          const sessionServer = new McpServer({
-            name: 'example-mcp',
-            version: '1.0.0',
-          });
-
-          // Re-register all tools/resources/prompts on the session server
-          registerTools(sessionServer);
-          registerResources(sessionServer);
-          registerPrompts(sessionServer);
-
-          await sessionServer.connect(transport);
-
-          if (transport.sessionId) {
-            transports.set(transport.sessionId, transport);
-          }
-
-          await transport.handleRequest(req, res);
-          return;
+        const id=req.headers['mcp-session-id'];
+        if(typeof id==='string'){
+          const entry=sessions.get(id);if(!entry){reply(404,{error:'Session expired. Initialize a new session.'});return;}
+          entry.touched=Date.now();await entry.transport.handleRequest(req,res,body);return;
         }
-
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Bad request — POST to /mcp to initialize' }));
-        return;
-      }
-
-      res.writeHead(404);
-      res.end('Not found');
+        if(req.method!=='POST'||!isInitializeRequest(body)){reply(400,{error:'Initialize the MCP session first.'});return;}
+        if(sessions.size>=64){res.setHeader('Retry-After','60');reply(503,{error:'Server busy. Please retry shortly.'});return;}
+        const sessionServer=new McpServer({name:'example-mcp',version:'1.0.0'});
+        registerTools(sessionServer);registerResources(sessionServer);registerPrompts(sessionServer);
+        const transport=new StreamableHTTPServerTransport({sessionIdGenerator:()=>randomUUID(),onsessioninitialized:sessionId=>sessions.set(sessionId,{transport,server:sessionServer,touched:Date.now()})});
+        transport.onclose=()=>{if(transport.sessionId)sessions.delete(transport.sessionId);};
+        await sessionServer.connect(transport);
+        await transport.handleRequest(req,res,body);
+        if(!transport.sessionId)await sessionServer.close();
+      }catch(error){console.error('MCP request failed:',error instanceof Error?error.message:'Unknown error');if(!res.headersSent)reply(500,{error:'MCP request failed'});else res.end();}
     });
 
-    httpServer.listen(port, () => {
+    httpServer.listen(port, process.env.HOST || '127.0.0.1', () => {
       console.log(`Example MCP server running on http://localhost:${port}/mcp`);
       console.log(`Health check: http://localhost:${port}/health`);
     });

@@ -263,12 +263,10 @@ export class OutputPanelComponent {
       if (r?.success && r.files.length > 0) {
         const componentFile = r.files.find((f: CompiledFile) => f.path.includes('component'));
         const pathToSelect = componentFile?.path || r.files[0].path;
-        // Only update if different to avoid loops
-        if (this.selectedFilePath() !== pathToSelect) {
-          this.selectedFilePath.set(pathToSelect);
-          const file = r.files.find((f: CompiledFile) => f.path === pathToSelect);
-          this.selectedContent = this.formatJavaScript(file?.content || '');
-        }
+        // The emitted path stays the same across compilations; refresh its contents too.
+        this.selectedFilePath.set(pathToSelect);
+        const file = r.files.find((f: CompiledFile) => f.path === pathToSelect);
+        this.selectedContent = this.formatJavaScript(file?.content || '');
       }
     });
   }
@@ -281,7 +279,7 @@ export class OutputPanelComponent {
     
     try {
       // Enhanced formatting specifically for Angular compiled output
-      let formatted = code
+      const formatted = code
         // Format component factory and metadata
         .replace(/(ɵɵdefineComponent\s*\(\s*{)/g, 'ɵɵdefineComponent({\n  ')
         .replace(/(ɵsetClassMetadata\s*\(\s*\w+\s*,\s*\[\s*{)/g, match => match + '\n    ')

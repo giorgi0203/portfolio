@@ -1,0 +1,61 @@
+name: Smart workspace deployment
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/smart-workspace-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install the tested workspace bundle
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          SMART_TODO_AI_KEY: ${{ secrets.SMART_TODO_AI_KEY }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: SMART_TODO_AI_KEY
+          timeout: 30s
+          command_timeout: 6m
+          script: |
+            set -eu
+            test -n "$SMART_TODO_AI_KEY"
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            stage=/var/tmp/smart-workspace-28dc06c54e301488e0b10343517bd4bad12c1ce5
+            sudo -n python3 - "$stage" <<'PYCLEAN'
+            import pathlib,re,shutil,sys
+            for p in pathlib.Path('/tmp').iterdir():
+              if str(p)!=sys.argv[1] and re.fullmatch(r'smart-workspace-[a-f0-9]{40}',p.name) and p.is_dir() and not p.is_symlink() and (p/'bundle.tar.gz').is_file():shutil.rmtree(p)
+            PYCLEAN
+            mkdir -p "$stage"
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/smart-todolist/28dc06c54e301488e0b10343517bd4bad12c1ce5/workspace-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'd175bc57dc4cf9126322d37a4ce17fdbb2ad61666017d77dd3c278d748d3ce01' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n --preserve-env=SMART_TODO_AI_KEY bash "$stage/deploy/install-shared-suite.sh" "$stage" a021ee5c01af5f904de6e0ce60b8a9e1b898c315
+            unset SMART_TODO_AI_KEY
+            sudo -n python3 - <<'PYHEADERS'
+            import urllib.request,json
+            with urllib.request.urlopen('https://auth.giorgi.app/embed',timeout=15) as response:
+              policies=response.headers.get_all('Content-Security-Policy',[])
+              assert policies and all("frame-ancestors 'none'" not in p for p in policies)
+              assert any('frame-ancestors https://giorgi.app https://www.giorgi.app' in p for p in policies)
+              assert not response.headers.get('X-Frame-Options')
+            req=urllib.request.Request('https://auth.giorgi.app/api/auth/session',headers={'Origin':'https://hls-player.giorgi.app'})
+            with urllib.request.urlopen(req,timeout=15) as response:
+              assert response.headers.get('Access-Control-Allow-Origin')=='https://hls-player.giorgi.app'
+              assert response.headers.get('Access-Control-Allow-Credentials')=='true'
+              assert json.load(response)['user'] is None
+            req=urllib.request.Request('https://auth.giorgi.app/api/analytics/event',method='OPTIONS',headers={'Origin':'https://hls-player.giorgi.app','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'Content-Type'})
+            with urllib.request.urlopen(req,timeout=15) as response:
+              assert response.status==204 and response.headers.get('Access-Control-Allow-Origin')=='https://hls-player.giorgi.app'
+            print('PASS live modal frame policy and HLS cross-origin account/analytics access')
+            PYHEADERS

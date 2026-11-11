@@ -1,256 +1,24 @@
-/**
- * Express Portfolio API Server
- */
-
+/** Public, read-only project catalog and API documentation. */
 import express from 'express';
 import cors from 'cors';
-
-const app = express();
-
-// Middleware
-app.use(express.json());
-app.use(cors({
-  origin: ['http://localhost:4200', 'https://giorgi.app'],
-  credentials: true,
-}));
-
-// Swagger documentation
-const swaggerDocument = {
-  openapi: '3.0.0',
-  info: {
-    title: 'Portfolio API',
-    description: 'API endpoints for the portfolio website',
-    version: '1.0.0'
-  },
-  servers: [
-    { url: 'http://localhost:3000', description: 'Development server' },
-    { url: 'https://giorgi.app', description: 'Production server' }
-  ],
-  tags: [
-    { name: 'portfolio', description: 'Portfolio related endpoints' }
-  ],
-  paths: {
-    '/api/health': {
-      get: {
-        tags: ['portfolio'],
-        summary: 'Health check endpoint',
-        responses: {
-          '200': {
-            description: 'Server is healthy',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string' },
-                    timestamp: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/projects': {
-      get: {
-        tags: ['portfolio'],
-        summary: 'Get all portfolio projects',
-        responses: {
-          '200': {
-            description: 'List of portfolio projects',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'number' },
-                      title: { type: 'string' },
-                      description: { type: 'string' },
-                      technologies: { type: 'array', items: { type: 'string' } },
-                      githubUrl: { type: 'string' },
-                      liveUrl: { type: 'string' },
-                      imageUrl: { type: 'string' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/skills': {
-      get: {
-        tags: ['portfolio'],
-        summary: 'Get all skills and proficiency levels',
-        responses: {
-          '200': {
-            description: 'List of skills with proficiency levels',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'number' },
-                      name: { type: 'string' },
-                      category: { type: 'string' },
-                      level: { type: 'number' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/contact': {
-      post: {
-        tags: ['portfolio'],
-        summary: 'Submit contact form',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['name', 'email', 'message'],
-                properties: {
-                  name: { type: 'string', example: 'John Doe' },
-                  email: { type: 'string', format: 'email', example: 'john@example.com' },
-                  subject: { type: 'string', example: 'Project Inquiry' },
-                  message: { type: 'string', example: 'I would like to discuss a project...' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '201': {
-            description: 'Contact form submitted successfully',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    message: { type: 'string' },
-                    success: { type: 'boolean' }
-                  }
-                }
-              }
-            }
-          },
-          '400': {
-            description: 'Bad request - missing required fields',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    message: { type: 'string' },
-                    success: { type: 'boolean' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
-
-// Serve Swagger JSON spec
-app.get('/api/docs.json', (req, res) => {
-  res.json(swaggerDocument);
-});
-
-// Simple HTML page for API docs
-app.get('/api/docs', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Portfolio API Documentation</title>
-      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
-      <style>
-        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin:0; background: #fafafa; }
-      </style>
-    </head>
-    <body>
-      <div id="swagger-ui"></div>
-      <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
-      <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
-      <script>
-        window.onload = function() {
-          const ui = SwaggerUIBundle({
-            url: '/api/docs.json',
-            dom_id: '#swagger-ui',
-            deepLinking: true,
-            presets: [
-              SwaggerUIBundle.presets.apis,
-              SwaggerUIStandalonePreset
-            ],
-            plugins: [
-              SwaggerUIBundle.plugins.DownloadUrl
-            ],
-            layout: "StandaloneLayout"
-          });
-        };
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// Health endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Projects endpoint
-app.get('/api/projects', (req, res) => {
-  res.json([
-    {
-      id: 1,
-      title: "Portfolio Website",
-      description: "A modern, responsive portfolio website built with Angular and Express",
-      technologies: ["Angular", "Express.js", "TypeScript", "Tailwind CSS", "Nx"],
-      githubUrl: "https://github.com/giorgi0203/portfolio",
-      liveUrl: "https://giorgi.app",
-      imageUrl: "/assets/portfolio-preview.jpg"
-    },
-    {
-      id: 2,
-      title: "E-Commerce Platform",
-      description: "Full-stack e-commerce solution with payment integration",
-      technologies: ["React", "Node.js", "MongoDB", "Stripe"],
-      githubUrl: "https://github.com/giorgi0203/ecommerce",
-      imageUrl: "/assets/ecommerce-preview.jpg"
-    },
-    {
-      id: 3,
-      title: "Task Management App",
-      description: "Real-time collaborative task management application",
-      technologies: ["Vue.js", "Express.js", "Socket.io", "PostgreSQL"],
-      githubUrl: "https://github.com/giorgi0203/taskmanager",
-      imageUrl: "/assets/taskmanager-preview.jpg"
-    }
-  ]);
-});
-
-// Skills endpoint
-app.get('/api/skills', (req, res) => {
+import path from 'node:path';
+import { projectCatalog, pageviewScript } from 'shared-types';
+const app=express();
+app.disable('x-powered-by');
+app.use(express.json({limit:'16kb'}));
+app.use(cors({origin:['http://localhost:4200','https://giorgi.app','https://www.giorgi.app','https://api.giorgi.app']}));
+const spec={openapi:'3.0.3',info:{title:'Giorgi Portfolio API',version:'1.1.0',description:'The real deployed project catalog and personal skills. Contact Giorgi through the form on giorgi.app.'},servers:[{url:process.env.PUBLIC_URL||'/'}],paths:{
+ '/api/health':{get:{summary:'Service health',responses:{'200':{description:'Healthy'}}}},
+ '/api/projects':{get:{summary:'List deployed apps',responses:{'200':{description:'Current public project catalog'}}}},
+ '/api/skills':{get:{summary:'Personal skills',responses:{'200':{description:'Skills and proficiency levels'}}}}
+}};
+app.get('/',(_req,res)=>res.redirect('/api/docs'));
+app.get('/api/health',(_req,res)=>res.json({status:'ok',service:'portfolio-api',timestamp:new Date().toISOString()}));
+app.get('/api/projects',(_req,res)=>res.json(projectCatalog));
+app.get('/api/docs.json',(_req,res)=>res.json(spec));
+app.use('/docs-assets',express.static(process.env.SWAGGER_ASSETS_PATH||path.join(process.cwd(),'node_modules/swagger-ui-dist'),{immutable:true,maxAge:'1d'}));
+app.get('/api/docs',(_req,res)=>res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Giorgi Portfolio API</title><link rel="stylesheet" href="/docs-assets/swagger-ui.css"></head><body><nav style="padding:16px;font-family:system-ui"><a href="https://giorgi.app/">← Giorgi’s apps</a> · <a href="https://auth.giorgi.app/">Giorgi account</a></nav><div id="swagger-ui"></div><script src="/docs-assets/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api/docs.json',dom_id:'#swagger-ui',deepLinking:true,validatorUrl:null});${pageviewScript}</script></body></html>`));
+app.get('/api/skills',(_req,res)=>{
   res.json([
     { id: 1, name: "Angular", category: "Frontend", level: 90 },
     { id: 2, name: "React", category: "Frontend", level: 85 },
@@ -273,29 +41,6 @@ app.get('/api/skills', (req, res) => {
     { id: 19, name: "CI/CD", category: "DevOps", level: 80 }
   ]);
 });
-
-// Contact endpoint
-app.post('/api/contact', (req, res) => {
-  const { name, email, message } = req.body;
-  
-  console.log('Contact form submission:', { name, email, message });
-  
-  if (!name || !email || !message) {
-    return res.status(400).json({
-      message: 'Please fill in all required fields',
-      success: false
-    });
-  }
-  
-  res.status(201).json({
-    message: 'Thank you for your message! I will get back to you soon.',
-    success: true
-  });
-});
-
-const port = Number(process.env.PORT) || 3000;
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 API Documentation available at: http://localhost:${port}/api/docs`);
-});
+// The old demo logged messages and claimed success without sending them.
+app.post('/api/contact',(_req,res)=>res.status(410).json({success:false,message:'Please use the contact form at https://giorgi.app/ to send a message.'}));
+app.listen(Number(process.env.PORT)||3000,process.env.HOST||'127.0.0.1',()=>console.log('Portfolio API ready'));

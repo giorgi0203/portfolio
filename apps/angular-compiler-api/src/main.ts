@@ -19,6 +19,9 @@ app.use(express.json({ limit: '200kb' }));
 
 // CORS: Only allow local development origin
 const allowedOrigins = [
+  'https://angular-compiler.giorgi.app',
+  'http://localhost:4202',
+  'http://127.0.0.1:4202',
   'http://localhost:4200',
   'http://localhost:4201',
   'http://127.0.0.1:4200',
@@ -66,8 +69,12 @@ app.get('/api', (_req: Request, res: Response) => {
   });
 });
 
+let compiling=false;
+
 // Main compilation endpoint
 app.post('/api/compile', async (req: Request, res: Response) => {
+  if(compiling){res.setHeader('Retry-After','3');res.status(429).json({ok:false,diagnostics:[{message:'The compiler is busy. Please retry in a few seconds.',category:'error'}]});return;}
+  compiling=true;
   try {
     const request: CompileRequest = req.body;
 
@@ -113,13 +120,15 @@ app.post('/api/compile', async (req: Request, res: Response) => {
       ],
     };
     res.status(500).json(errorResponse);
-  }
+  } finally {compiling=false;}
 });
 
 // Error handling middleware
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled error:', err);
+
+  if('status' in err && err.status===413){res.status(413).json({ok:false,diagnostics:[{message:'Source exceeds the 200 KB limit',category:'error'}]});return;}
 
   // CORS error
   if (err.message === 'CORS not allowed') {

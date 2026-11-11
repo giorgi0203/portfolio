@@ -49,61 +49,16 @@ export class AotCompilerService {
   validateRequest(request: CompileRequest): CompilerDiagnostic[] {
     const diagnostics: CompilerDiagnostic[] = [];
 
-    // Check required fields
-    if (!request.componentTs || typeof request.componentTs !== 'string') {
-      diagnostics.push({
-        message: 'componentTs is required and must be a string',
-        category: 'error',
-      });
+    if (!request || typeof request !== 'object' || Array.isArray(request)) return [{message:'A JSON object is required',category:'error'}];
+    if (typeof request.componentTs !== 'string' || !request.componentTs.trim()) diagnostics.push({message:'componentTs is required and must be a string',category:'error'});
+    for (const key of ['templateHtml','styleCss','angularVersionHint'] as const) {
+      if (request[key] !== undefined && typeof request[key] !== 'string') diagnostics.push({message:`${key} must be a string`,category:'error'});
     }
-
-    // Check if componentTs contains a complete standalone component
-    const isCompleteComponent = request.componentTs && (
-      request.componentTs.includes('@Component') ||
-      request.componentTs.includes('import')
-    );
-
-    // Only require templateHtml if not providing a complete component
-    if (!isCompleteComponent && (!request.templateHtml || typeof request.templateHtml !== 'string')) {
-      diagnostics.push({
-        message: 'templateHtml is required when not providing a complete standalone component',
-        category: 'error',
-      });
-    }
-
-    // Check size limits
-    const totalSize =
-      (request.componentTs?.length || 0) +
-      (request.templateHtml?.length || 0) +
-      (request.styleCss?.length || 0);
-
-    if (totalSize > MAX_INPUT_SIZE) {
-      diagnostics.push({
-        message: `Input size (${totalSize} bytes) exceeds maximum allowed (${MAX_INPUT_SIZE} bytes)`,
-        category: 'error',
-      });
-    }
-
-    // Check for path traversal attempts
-    const dangerousPatterns = [
-      /\.\.\//,
-      /\.\.\\/,
-      /~\//,
-      /\$\{/,
-      /\$\(/,
-      /`/,
-    ];
-    const allInput = `${request.componentTs}${request.templateHtml}${request.styleCss || ''}`;
-
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(allInput)) {
-        diagnostics.push({
-          message: 'Input contains potentially dangerous patterns',
-          category: 'error',
-        });
-        break;
-      }
-    }
+    if (diagnostics.length) return diagnostics;
+    const complete = /@Component\s*\(/.test(request.componentTs);
+    if (!complete && !request.templateHtml?.trim()) diagnostics.push({message:'templateHtml is required for a component class body',category:'error'});
+    const size=Buffer.byteLength(request.componentTs+(request.templateHtml||'')+(request.styleCss||''),'utf8');
+    if(size>MAX_INPUT_SIZE) diagnostics.push({message:'Source exceeds the 200 KB limit',category:'error'});
 
     return diagnostics;
   }
@@ -166,13 +121,14 @@ export class AotCompilerService {
     fs.mkdirSync(appDir, { recursive: true });
 
     // Determine Angular version
-    const angularVersion = request.angularVersionHint || '19';
+    const angularVersion = '21';
 
     // Get the workspace node_modules path
     // In development, __dirname is in src/compiler, need to go up to workspace root
     // In production (bundled), __dirname is in dist/apps/angular-compiler-api
     let workspaceRoot = path.resolve(__dirname, '../../../../');
-    let workspaceNodeModules = path.join(workspaceRoot, 'node_modules');
+    let workspaceNodeModules = process.env.COMPILER_NODE_MODULES || path.join(__dirname, 'node_modules');
+    if(!fs.existsSync(workspaceNodeModules)) workspaceNodeModules = path.join(workspaceRoot,'node_modules');
     
     // If that doesn't exist, try the production path
     if (!fs.existsSync(workspaceNodeModules)) {
@@ -198,11 +154,11 @@ export class AotCompilerService {
     );
 
     // Write main.ts
-    fs.writeFileSync(path.join(srcDir, 'main.ts'), getMainTs());
+    fs.writeFileSync(path.join(srcDir, 'main.ts'), getMainTs(request.componentTs));
 
     // Write component file
     const hasStyles = !!request.styleCss;
-    const isCompleteComponent = request.componentTs.includes('@Component') || request.componentTs.includes('import');
+    const isCompleteComponent = /@Component\s*\(/.test(request.componentTs);
     const componentContent = getComponentTs(
       request.componentTs,
       !isCompleteComponent && !!request.templateHtml,
@@ -214,7 +170,7 @@ export class AotCompilerService {
     );
 
     // Write template file only if needed (not for complete components)
-    if (!isCompleteComponent && request.templateHtml) {
+    if (request.templateHtml) {
       fs.writeFileSync(
         path.join(appDir, 'demo.component.html'),
         request.templateHtml
@@ -222,7 +178,7 @@ export class AotCompilerService {
     }
 
     // Write styles file only if provided and not a complete component
-    if (!isCompleteComponent && request.styleCss) {
+    if (request.styleCss) {
       fs.writeFileSync(
         path.join(appDir, 'demo.component.css'),
         request.styleCss
@@ -275,8 +231,8 @@ export class AotCompilerService {
           cwd: projectDir,
           stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
           env: {
-            ...process.env,
-            NODE_OPTIONS: '--max-old-space-size=512',
+            NODE_ENV: 'production',
+            NODE_OPTIONS: '--max-old-space-size=192',
           },
         });
 

@@ -1,29 +1,108 @@
-<div class="fixed inset-0 -z-10 bg-gradient-to-br from-primary-500 to-secondary-500 overflow-hidden">
-  @for (particle of particles; track particle.id) {
-    <div
-      class="particle w-1 h-1 bg-white/10 rounded-full animate-float"
-      [style.left.%]="particle.x"
-      [style.top.%]="particle.y"
-      [style.width.px]="particle.size"
-      [style.height.px]="particle.size"
-      [style.animation-duration.s]="particle.speed"
-    ></div>
-  }
-</div>
-
-<!-- Navigation -->
-<nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-lg z-50 py-4 shadow-lg" [@fadeInUp]>
-  <div class="max-w-6xl mx-auto px-5 flex justify-between items-center">
-    <a routerLink="/" class="text-xl font-bold text-primary-500 no-underline cursor-pointer">{{ title }}</a>
-    <ul class="flex list-none gap-8">
-      <li>
-        <a routerLink="/" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">Portfolio</a>
-      </li>
-      <li>
-        <a routerLink="/hls-player" class="no-underline text-gray-800 font-medium transition-colors duration-300 hover:text-primary-500">HLS Player</a>
-      </li>
-    </ul>
-  </div>
-</nav>
-
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path d="M5 12h14m-6-6 6 6-6 6" />
+    </symbol>
+    <symbol id="i-up-right" viewBox="0 0 24 24">
+      <path d="M6 18 18 6M6 6h12v12" />
+    </symbol>
+    <symbol id="i-code" viewBox="0 0 24 24">
+      <path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18" />
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+      <path
+        d="m12 1 2.5 7.5L22 6l-4.5 6L22 18l-7.5-2.5L12 23l-2.5-7.5L2 18l4.5-6L2 6l7.5 2.5Z"
+      />
+    </symbol>
+    <symbol id="i-cursor" viewBox="0 0 24 24">
+      <path d="m4 2 16 12-8 1-4 7Z" />
+    </symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24">
+      <path
+        d="M4 8h13v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4ZM17 9h2a3 3 0 0 1 0 6h-2M3 23h16M8 1v3m5-3v3"
+      />
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24">
+      <path d="m8 4 12 8-12 8Z" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="m5 12 4 4L19 6" />
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <path d="M12 3v18M3 12h18" />
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24">
+      <path d="M20 7a9 9 0 1 0 1 8M20 2v6h-6" />
+    </symbol>
+    <symbol id="i-github" viewBox="0 0 24 24">
+      <path
+        d="M9 19c-4 1-4-2-6-2m12 5v-4a3.5 3.5 0 0 0-1-3c3-.4 6-1.5 6-6a4.6 4.6 0 0 0-1.3-3.2A4.2 4.2 0 0 0 18.6 2S17.5 1.7 15 3.3a11 11 0 0 0-6 0C6.5 1.7 5.4 2 5.4 2a4.2 4.2 0 0 0-.1 3.8A4.6 4.6 0 0 0 4 9c0 4.5 3 5.6 6 6a3.5 3.5 0 0 0-1 3v4"
+      />
+    </symbol>
+  </defs>
+</svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <nav class="nav-wrap" aria-label="Main navigation">
+    <a routerLink="/" class="brand" aria-label="Giorgi Arabuli — home">
+      <span class="brand-mark" aria-hidden="true">g.</span>
+      <span class="brand-name"
+        >giorgi.app<span>a personal work in progress</span></span
+      >
+    </a>
+    <div class="nav-links">
+      <details class="app-menu" #appsMenu>
+        <summary>My apps <span aria-hidden="true">⌄</span></summary>
+        <div class="app-menu-panel">
+          <a href="#projects" (click)="appsMenu.open = false"
+            >The whole junk drawer <span>↓</span></a
+          >
+          @for (app of deployedApps; track app.id) {
+          <a [href]="app.liveUrl" (click)="appsMenu.open = false"
+            >{{ app.title }}
+            <svg class="icon" aria-hidden="true"><use href="#i-up-right" /></svg
+          ></a>
+          }
+        </div>
+      </details>
+      <a href="#about" class="about-link">The human</a>
+      <a
+        href="https://github.com/giorgi0203"
+        class="github-link"
+        aria-label="Giorgi on GitHub"
+        target="_blank"
+        rel="noopener noreferrer"
+        ><svg class="icon" aria-hidden="true"><use href="#i-github" /></svg
+        ><span>GitHub</span
+        ><svg class="icon small-arrow" aria-hidden="true">
+          <use href="#i-up-right" /></svg
+      ></a>
+    </div>
+  </nav>
+</header>
 <router-outlet></router-outlet>
+
+<button class="owner-entry" type="button" (click)="openOwnerLogin()">Owner sign-in <kbd>⌘ .</kbd></button>
+<dialog #ownerDialog class="owner-dialog" aria-labelledby="owner-title" (close)="ownerLoginClosed()">
+  <header><h2 id="owner-title">Your Giorgi account</h2><button type="button" aria-label="Close sign-in" (click)="closeOwnerLogin()">×</button></header>
+  @if (loginOpen) {
+    <div class="identity-window">
+      <iframe #identityFrame [src]="authEmbed" [style.visibility]="identityStatus==='ready'?'visible':'hidden'" title="Giorgi account sign-in" referrerpolicy="strict-origin"></iframe>
+      @if (identityStatus!=='ready') {
+        <div class="identity-status" role="status" aria-live="polite">
+          @if (identityStatus==='loading') {<span class="identity-spinner" aria-hidden="true"></span><p>Connecting to your Giorgi account…</p>}
+          @else {<h3>Let’s try that again.</h3><p>The sign-in window couldn’t connect. Retry, or open the account page to sign in or register.</p><button type="button" (click)="retryOwnerLogin()">Retry sign-in</button><a href="https://auth.giorgi.app/?continue=/analytics">Continue on the account page ↗</a>}
+        </div>
+      }
+    </div>
+  }
+  <p><a href="https://auth.giorgi.app/?continue=/analytics">Open sign-in in a full page</a></p>
+</dialog>
+
+<div class="privacy-links"><a href="/privacy.html">Privacy</a>@if(googleAnalytics.available()){<button type="button" (click)="googleAnalytics.settings()">Analytics settings</button>}</div>
+@if(googleAnalytics.showChoice()){
+ <section class="analytics-choice" role="region" aria-label="Optional Google Analytics">
+  <strong>Help me understand what’s useful?</strong><p>With your permission, Google Analytics measures visits and app-link clicks using cookies. The site also keeps cookie-free aggregate counts. Form contents are excluded. <a href="/privacy.html">Privacy details</a></p>
+  <div><button type="button" (click)="googleAnalytics.choose('deny')">No thanks</button><button type="button" (click)="googleAnalytics.choose('allow')">Allow Google Analytics</button></div>
+ </section>
+}

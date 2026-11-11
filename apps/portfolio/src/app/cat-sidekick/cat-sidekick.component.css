@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  height: 0;
+  background: transparent;
+  color: #526044;
+}
+.cat-sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 160px;
+  height: 182px;
+  z-index: 15;
+  pointer-events: none !important;
+  user-select: none;
+  will-change: transform;
+}
+.cat-sprite[hidden],
+.cat-controls[hidden] {
+  display: none !important;
+}
+.cat-drawing {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 2px #27352e12);
+}
+.cat-whisper {
+  position: absolute;
+  left: 43%;
+  top: 2px;
+  color: #6f765d;
+  font: 10px var(--mono, monospace);
+  letter-spacing: 3px;
+  opacity: 0;
+}
+.awake-message {
+  display: none;
+}
+.sleep-message {
+  display: none;
+}
+.sleep-eyes {
+  display: none;
+}
+.cat-mouth {
+  opacity: 0;
+}
+.cat-tongue {
+  opacity: 0;
+  transform-origin: 110px 138px;
+}
+.cat-sprite[data-state='sleeping'] .awake-eyes {
+  display: none;
+}
+.cat-sprite[data-state='sleeping'] .sleep-eyes {
+  display: block;
+}
+.cat-sprite[data-state='sleeping'] .cat-whisper {
+  opacity: 1;
+}
+.cat-sprite[data-state='sleeping'] .sleep-message {
+  display: inline;
+}
+.cat-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 31px;
+  max-width: calc(100vw - 24px);
+  padding: 0;
+  pointer-events: auto;
+  font: 10px var(--mono, monospace);
+  color: #526044;
+}
+.cat-controls > span {
+  display: none;
+}
+.cat-activities {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.cat-controls button {
+  border: 1px solid #bec9ad;
+  border-radius: 20px;
+  background: #fbfaf4f5;
+  color: #455b39;
+  min-height: 30px;
+  padding: 5px 9px;
+  font: inherit;
+  box-shadow: 0 2px 4px #26352d08;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cat-controls button:hover {
+  background: #e9f2d7;
+}
+.cat-controls button:focus-visible {
+  outline: 3px solid #7d58b8;
+  outline-offset: 3px;
+}
+.cat-toggle {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+@media (max-width: 650px) {
+  .cat-controls {
+    font-size: 9px;
+    gap: 4px;
+  }
+  .cat-controls button {
+    padding: 5px 7px;
+    min-height: 32px;
+  }
+  .cat-activities {
+    gap: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cat-controls button {
+    transition: none;
+  }
+  .cat-sprite * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -9,6 +9,10 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(),
-    provideMonacoEditor(),
+    provideMonacoEditor({onMonacoLoad:()=>{
+      // Package typings are unavailable in Monaco's virtual filesystem; real AOT diagnostics remain available below.
+      const monaco=(window as unknown as {monaco:{languages:{typescript:{typescriptDefaults:{setDiagnosticsOptions:(options:{noSemanticValidation:boolean;noSyntaxValidation:boolean})=>void}}}}}).monaco;
+      monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({noSemanticValidation:true,noSyntaxValidation:false});
+    }}),
   ],
 };

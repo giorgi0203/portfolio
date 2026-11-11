@@ -101,6 +101,15 @@ async function compile(projectDir: string): Promise<WorkerResult> {
     // Create Angular compiler host
     const host = ts.createCompilerHost(angularCompilerOptions);
     
+    // Components may only read their temporary project and installed compiler libraries.
+    const libraryRoot=fs.realpathSync(path.join(projectDir,'node_modules'));
+    const inside=(file:string)=>{
+      try { const real=fs.realpathSync(file);return [projectDir,libraryRoot].some(root=>real===root||real.startsWith(root+path.sep)); } catch {return false;}
+    };
+    const read=host.readFile.bind(host),exists=host.fileExists.bind(host);
+    host.readFile=file=>inside(file)?read(file):undefined;
+    host.fileExists=file=>inside(file)&&exists(file);
+
     // Store emitted files in memory
     const emittedFiles = new Map<string, string>();
     const originalWriteFile = host.writeFile;

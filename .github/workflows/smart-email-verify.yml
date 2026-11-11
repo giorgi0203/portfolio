@@ -1,0 +1,49 @@
+name: Verify workspace email delivery
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/smart-email-verify.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            sudo -n python3 - <<'PY'
+            import json,pathlib,urllib.request,urllib.error,time
+            cfg=json.loads(pathlib.Path('/etc/smart-todolist/email.json').read_text())
+            def api(path,body=None):
+              req=urllib.request.Request('https://api.resend.com'+path,headers={'Authorization':'Bearer '+cfg['apiKey'],'Content-Type':'application/json','User-Agent':'SmartTodo-Setup/1.0'},data=None if body is None else json.dumps(body).encode())
+              try:
+                with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
+              except urllib.error.HTTPError as e:raise SystemExit('Email API returned HTTP '+str(e.code))
+            domain=api('/domains/'+cfg['domainId'])
+            if domain['status'] not in ['pending','verified']:api('/domains/'+cfg['domainId']+'/verify',{})
+            for attempt in range(6):
+              domain=api('/domains/'+cfg['domainId'])
+              if domain['status']=='verified':break
+              time.sleep(5)
+            for name,kind in [('resend._domainkey.mail.giorgi.app','TXT'),('send.mail.giorgi.app','MX'),('send.mail.giorgi.app','TXT'),('rsend.mail.giorgi.app','CNAME')]:
+              with urllib.request.urlopen('https://dns.google/resolve?name='+name+'&type='+kind,timeout=15) as r:answer=json.load(r)
+              print('Public DNS',kind,name,'answers:',len(answer.get('Answer',[])))
+            print('EMAIL_VERIFICATION_JSON='+json.dumps({'status':domain['status'],'records':[{'type':r['type'],'name':r['name'],'status':r['status']} for r in domain['records']]}))
+            if domain['status']=='verified':
+              result=api('/emails',{'from':cfg['from'],'to':['delivered@resend.dev'],'subject':'Smart Todo verification delivery check','text':'Verification email delivery check for giorgi.app. This is a test message to the provider test mailbox.'})
+              assert result.get('id')
+              print('Verification email accepted by Resend test mailbox')
+            sites=pathlib.Path('/etc/nginx/sites-enabled')
+            configs=[p.read_text() for p in sites.iterdir() if p.is_file()]
+            import re
+            print('Nginx sets trusted real client IP:',any('smart-todolist.giorgi.app' in x and re.search(r'proxy_set_header\s+X-Real-IP\s+\$remote_addr;',x) for x in configs))
+            PY

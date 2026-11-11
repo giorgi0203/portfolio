@@ -91,7 +91,7 @@
       "executor": "@nx/web:file-server",
       "options": {
         "buildTarget": "hls-player:build",
-        "staticFilePath": "dist/apps/hls-player/browser",
+        "staticFilePath": "dist/apps/hls-player",
         "spa": true
       }
     }

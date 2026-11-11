@@ -1,40 +1,43 @@
-import { fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { App } from './app';
-import { NxWelcome } from './nx-welcome';
-import { Router, RouterModule } from '@angular/router';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        RouterModule.forRoot([{ path: '', component: NxWelcome }]),
-        App,
-        NxWelcome,
-      ],
+      imports: [App],
+      providers: [provideRouter([]), provideNoopAnimations()],
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('renders the portfolio owner in the home link', () => {
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it(`should have as title 'portfolio'`, () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('portfolio');
-  });
-
-  it('should render title', fakeAsync(() => {
-    const fixture = TestBed.createComponent(App);
-    const router = TestBed.inject(Router);
-    fixture.ngZone?.run(() => router.navigate(['']));
-    tick();
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain(
-      'Welcome portfolio'
+    const link = fixture.nativeElement.querySelector('nav a');
+    expect(link.getAttribute('aria-label')).toBe('Giorgi Arabuli — home');
+    expect(link.textContent).toContain('giorgi.app');
+    expect(link.getAttribute('href')).toBe('/');
+  });
+
+  it('keeps hidden infrastructure out of project navigation',()=>{
+    const fixture=TestBed.createComponent(App);fixture.detectChanges();
+    for(const host of ['example-mcp','mcp','api']) expect(fixture.nativeElement.querySelector('a[href="https://'+host+'.giorgi.app/"]')).toBeNull();
+  });
+  it('links directly to the deployed HLS player', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector(
+      'a[href="https://hls-player.giorgi.app/"]',
     );
-  }));
+    expect(link?.textContent.trim()).toBe('HLS Inspector');
+  });
+  it('links directly to the deployed todo list', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector(
+      'a[href="https://smart-todolist.giorgi.app/"]',
+    );
+    expect(link?.textContent.trim()).toBe('Smart Todo List');
+  });
 });

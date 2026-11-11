@@ -8,12 +8,16 @@
   "targets": {
     "build": {
       "executor": "@nx/angular:webpack-browser",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/portfolio",
         "index": "apps/portfolio/src/index.html",
         "main": "apps/portfolio/src/main.ts",
-        "polyfills": ["zone.js"],
+        "polyfills": [
+          "zone.js"
+        ],
         "tsConfig": "apps/portfolio/tsconfig.app.json",
         "assets": [
           {
@@ -21,7 +25,9 @@
             "input": "apps/portfolio/public"
           }
         ],
-        "styles": ["apps/portfolio/src/styles.css"],
+        "styles": [
+          "apps/portfolio/src/styles.css"
+        ],
         "customWebpackConfig": {
           "path": "apps/portfolio/webpack.config.ts"
         }
@@ -43,6 +49,20 @@
           "outputHashing": "all",
           "customWebpackConfig": {
             "path": "apps/portfolio/webpack.prod.config.ts"
+          },
+          "fileReplacements": [
+            {
+              "replace": "apps/portfolio/src/environments/environment.ts",
+              "with": "apps/portfolio/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": {
+            "scripts": true,
+            "styles": {
+              "minify": true,
+              "inlineCritical": false
+            },
+            "fonts": false
           }
         },
         "development": {
@@ -81,7 +101,9 @@
     },
     "test": {
       "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "outputs": [
+        "{options.reportsDirectory}"
+      ],
       "options": {
         "reportsDirectory": "../../coverage/apps/portfolio"
       }
@@ -91,7 +113,7 @@
       "executor": "@nx/web:file-server",
       "options": {
         "buildTarget": "portfolio:build",
-        "staticFilePath": "dist/apps/portfolio/browser",
+        "staticFilePath": "dist/apps/portfolio",
         "spa": true
       }
     }

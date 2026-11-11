@@ -1,0 +1,60 @@
+name: Legacy full demo stack (disabled)
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/extra-apps-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-extra-apps-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # The owner retired the MCP demos; this old bundle would re-enable them.
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install prebuilt services and HTTPS hosts
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 6m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            stage=/var/tmp/giorgi-extra-${{ github.sha }}
+            mkdir -p "$stage"
+            trap 'rm -rf -- "$stage"' EXIT
+            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/668eb0005bcb6142bea410df2d1480b334039db3/extra-apps-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'b455b35d81bc7ea930d2c56ad4952582133a2341137e47259a4102aba8bff55d' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n bash "$stage/deploy/install-extra-apps.sh" "$stage" 850c4eeb98527b3d8a2d491185528cfdc2aa585b
+      - uses: actions/checkout@v4
+        with:
+          ref: 5d64e8ddb3ede7fcff5e257e18514d43f48fa026
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify public API and MCP requests from outside the droplet
+        env:
+          COMPILER_URL: https://angular-compiler.giorgi.app
+          EXAMPLE_URL: https://example-mcp.giorgi.app
+          GATEWAY_URL: https://mcp.giorgi.app
+          CATALOG_URL: https://api.giorgi.app
+          SMOKE_ONLY: '1'
+        run: node scripts/check-extra-services.cjs
+      - name: Verify production compiler, API docs and MCP landing pages in Chrome
+        env:
+          COMPILER_UI_URL: https://angular-compiler.giorgi.app/
+          EXAMPLE_URL: https://example-mcp.giorgi.app
+          GATEWAY_URL: https://mcp.giorgi.app
+          CATALOG_URL: https://api.giorgi.app
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          PLAYWRIGHT_MODULE="$RUNNER_TEMP/browser/node_modules/playwright" node scripts/check-compiler-browser.cjs

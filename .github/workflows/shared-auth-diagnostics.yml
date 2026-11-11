@@ -1,0 +1,38 @@
+name: Clean and inspect shared auth runtime
+on:
+  push:
+    branches: [codex/portfolio-subdomains]
+    paths: ['.github/workflows/shared-auth-diagnostics.yml']
+permissions:
+  contents: read
+concurrency:
+  group: smart-workspace-deployment
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            df -h /tmp
+            sudo -n python3 - <<'PYTEMP'
+            import pathlib,re,shutil
+            for p in pathlib.Path('/tmp').iterdir():
+              if re.fullmatch(r'smart-workspace-[a-f0-9]{40}',p.name) and p.is_dir() and not p.is_symlink() and (p/'bundle.tar.gz').is_file():
+                print('Removing generated deployment stage:',p.name)
+                shutil.rmtree(p)
+            PYTEMP
+            free -m
+            ps -eo pid,comm,rss --sort=-rss | head -12
+            systemctl show giorgi-identity smart-todolist-web smart-todolist-agent -p Id -p NRestarts -p MemoryCurrent -p Result
+            journalctl -k --since '30 minutes ago' --no-pager | grep -E 'Out of memory|Killed process|oom' | tail -8 || true
+            journalctl -u giorgi-identity --since '20 minutes ago' --no-pager | grep -E 'FATAL|Error|heap|Killed|signal|exit|Ready|Started|Failed' | tail -20 || true
+            df -h /var

@@ -1,14 +1,18 @@
-import { composePlugins, withNx } from '@nx/webpack';
-import { ModuleFederationConfig } from '@nx/module-federation';
-import { withModuleFederation } from '@nx/angular/module-federation';
+import { withModuleFederation } from '@nx/module-federation/angular';
+import config from './module-federation.config';
 
-import baseConfig from './module-federation.config';
-
-const prodConfig: ModuleFederationConfig = {
-  ...baseConfig,
-};
-
-export default composePlugins(
-  withNx(),
-  withModuleFederation(prodConfig)
+export default withModuleFederation(config, { dts: false }).then(
+  (withFederation) => (webpackConfig) => {
+    const result = withFederation(webpackConfig);
+    // Shared RxJS modules occur in multiple federation runtime chunks. Keep
+    // their exports consistent instead of pruning them per runtime.
+    result.optimization = {
+      ...result.optimization,
+      usedExports: false,
+      providedExports: false,
+      sideEffects: false,
+      concatenateModules: false,
+    };
+    return result;
+  },
 );

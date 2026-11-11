@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/angular-compiler-ui",
         "browser": "apps/angular-compiler-ui/src/main.ts",
@@ -24,7 +26,9 @@
             "output": "/assets/monaco/min"
           }
         ],
-        "styles": ["apps/angular-compiler-ui/src/styles.css"]
+        "styles": [
+          "apps/angular-compiler-ui/src/styles.css"
+        ]
       },
       "configurations": {
         "production": {
@@ -36,8 +40,8 @@
             },
             {
               "type": "anyComponentStyle",
-              "maximumWarning": "4kb",
-              "maximumError": "8kb"
+              "maximumWarning": "14kb",
+              "maximumError": "16kb"
             }
           ],
           "outputHashing": "all"
@@ -48,7 +52,11 @@
           "sourceMap": true
         }
       },
-      "defaultConfiguration": "production"
+      "defaultConfiguration": "production",
+      "dependsOn": [
+        "preview-runtime",
+        "^build"
+      ]
     },
     "serve": {
       "continuous": true,
@@ -61,14 +69,20 @@
           "buildTarget": "angular-compiler-ui:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "options": {
+        "port": 4202,
+        "proxyConfig": "apps/angular-compiler-ui/proxy.conf.json"
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint"
     },
     "test": {
       "executor": "@nx/vitest:test",
-      "outputs": ["{options.reportsDirectory}"],
+      "outputs": [
+        "{options.reportsDirectory}"
+      ],
       "options": {
         "reportsDirectory": "../../coverage/apps/angular-compiler-ui"
       }
@@ -80,6 +94,16 @@
         "buildTarget": "angular-compiler-ui:build",
         "staticFilePath": "dist/apps/angular-compiler-ui/browser",
         "spa": true
+      }
+    },
+    "preview-runtime": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "outputs": [
+        "{projectRoot}/public/preview/runtime.js"
+      ],
+      "options": {
+        "command": "node apps/angular-compiler-ui/scripts/build-preview.cjs"
       }
     }
   }
