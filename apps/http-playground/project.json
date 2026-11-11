@@ -1,0 +1,28 @@
+{
+  "name": "http-playground",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/http-playground/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/http-playground"],
+      "options": {
+        "command": "node_modules/.bin/vite build --config apps/http-playground/vite.config.ts"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "node_modules/.bin/vite --config apps/http-playground/vite.config.ts --host 127.0.0.1 --port 4206"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test apps/http-playground/tests/*.test.mjs"
+      }
+    }
+  }
+}
