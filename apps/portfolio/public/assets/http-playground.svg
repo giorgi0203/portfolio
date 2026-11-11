@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 370" fill="none">
+  <rect width="600" height="370" rx="20" fill="#e8eddf"/>
+  <rect x="28" y="25" width="544" height="320" rx="16" fill="#fbfaf4" stroke="#b9c5ad"/>
+  <path d="M29 68h542" stroke="#d7ddcf"/>
+  <g fill="#aab69a"><circle cx="49" cy="47" r="5"/><circle cx="66" cy="47" r="5"/><circle cx="83" cy="47" r="5"/></g>
+  <text x="548" y="52" text-anchor="end" fill="#66725e" font-family="monospace" font-size="12">A REQUEST, EXPLAINED.</text>
+  <rect x="52" y="91" width="496" height="47" rx="9" fill="#263b31"/>
+  <text x="68" y="120" fill="#d6f38c" font-family="monospace" font-size="17">GET</text>
+  <text x="113" y="120" fill="#f0f4e8" font-family="monospace" font-size="16">https://example.invalid/api/hello</text>
+  <path d="M97 194h406" stroke="#a6b596" stroke-width="2" stroke-dasharray="5 5"/>
+  <g font-family="monospace" text-anchor="middle" font-size="13">
+    <rect x="57" y="168" width="93" height="52" rx="12" fill="#edf2e6" stroke="#a9b89b"/>
+    <text x="103" y="199" fill="#52674a">DNS</text>
+    <rect x="186" y="168" width="93" height="52" rx="12" fill="#d6f38c" stroke="#7a935c"/>
+    <text x="232" y="199" fill="#2f4527">TLS ✓</text>
+    <rect x="315" y="168" width="93" height="52" rx="12" fill="#eee7f6" stroke="#b7a5cb"/>
+    <text x="361" y="199" fill="#69527e">CACHE</text>
+    <rect x="444" y="168" width="99" height="52" rx="12" fill="#f7e2d6" stroke="#d5aa8d"/>
+    <text x="493" y="199" fill="#805d42">API</text>
+  </g>
+  <path d="m165 190 5 4-5 4m129-8 5 4-5 4m129-8 5 4-5 4" stroke="#829275" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="53" y="264" fill="#263b31" font-family="sans-serif" font-weight="700" font-size="29">HTTP Playground</text>
+  <text x="53" y="291" fill="#68765e" font-family="sans-serif" font-size="16">Make it slow. Break it. Understand it.</text>
+  <rect x="53" y="309" width="130" height="21" rx="10" fill="#e7eedc"/>
+  <circle cx="66" cy="319" r="3" fill="#7b955a"/>
+  <text x="77" y="323" fill="#68765e" font-family="monospace" font-size="10">SIMULATED NETWORK</text>
+</svg>
