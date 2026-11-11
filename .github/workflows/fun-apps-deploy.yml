@@ -60,3 +60,7 @@ jobs:
             console.log('PASS real HTTPS health and noindex/no-store/no-referrer for room links');
           })().catch(error=>{console.error(error);process.exitCode=1});
           JS
+  publish-portfolio:
+    needs: deploy
+    uses: ./.github/workflows/portfolio-deploy.yml
+    secrets: inherit

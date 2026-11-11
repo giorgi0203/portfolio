@@ -13,6 +13,6 @@ Rooms expire seven days after creation. They persist across server restarts in `
 2. Run `node scripts/new-apps-browser.cjs` (two real browser contexts and isolated SQLite) and `node scripts/seo-analytics-browser.cjs`.
 3. Commit source, then run `python3 scripts/package-fun-apps.py`. Publish its archive on `deploy/fun-apps-artifacts` and pin its immutable commit/checksum in `.github/workflows/fun-apps-deploy.yml`.
 4. The scoped installer stages disk-backed releases under `/var/www/giorgi-fun-apps`, preserves room data, provisions the two hosts' ACME certificate, verifies service/HTTPS, and restores previous service/static configuration on failure.
-5. Publish a separately built portfolio artifact and update its scoped workflow after the new apps pass public checks.
+5. Publish a separately built portfolio artifact and pin it in its scoped workflow. The two-app deployment calls that reusable portfolio workflow only after both new apps pass public checks.
 
 The deploy workflow runs the same browser journeys over public HTTPS and deletes its synthetic room afterward. It never prints room credentials. The simulator's deterministic engine tests cover cache/fault semantics; backend HTTP tests cover persistence, authorization, race handling, limits and expiry. Browser room tests create no account or email and incur no AI charges.

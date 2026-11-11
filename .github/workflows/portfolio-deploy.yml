@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/portfolio-deploy.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -36,12 +37,12 @@ jobs:
             ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
             stage=/tmp/giorgi-portfolio-${{ github.sha }}
             mkdir -p "$stage"
-            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/6a3ad7cb472e7033363fc14a05ff78869d4b09de/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'a26f6f86303508fb0f210343af1bed232d6864e01da1c28005eec10e00a3b94e' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            curl --fail --location --silent --show-error --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/a6c4b9ef7f301f9b01455f99d64a6569f9668025/portfolio-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' '8a0cdb42b0084a8822136f7b5b705cac4ec72d3e0646904d11215e1bbf13133b' "$stage/bundle.tar.gz" | sha256sum --check --strict
             tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
             sudo -n bash "$stage/deploy/install-portfolio.sh" "$stage" ${{ github.sha }}
 
-      - name: Verify the five-app showcase and shared sign-in in Chrome
+      - name: Verify the seven-app showcase and shared sign-in in Chrome
         run: |
           npm install --prefix "$RUNNER_TEMP/showcase-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
           node <<'JS'
@@ -56,8 +57,8 @@ jobs:
               await page.route('https://www.googletagmanager.com/**',route=>{googleLoads++;return route.fulfill({contentType:'application/javascript',body:'window.__googleConsentTest=true;'});});
               await page.goto('https://giorgi.app/',{waitUntil:'domcontentloaded'});
               await page.getByRole('button',{name:'Owner sign-in',exact:false}).waitFor();
-              assert.equal(await page.locator('[data-app-card]').count(),5);
-              for(const [title,host] of [['Angular Learning Lab','angular-compiler'],['HLS Inspector','hls-player'],['Developer Toolbox','toolbox'],['Website Health','status']])assert.equal(await page.getByRole('link',{name:'Open '+title,exact:true}).getAttribute('href'),'https://'+host+'.giorgi.app/');
+              assert.equal(await page.locator('[data-app-card]').count(),7);
+              for(const [title,host] of [['Angular Learning Lab','angular-compiler'],['HLS Inspector','hls-player'],['Developer Toolbox','toolbox'],['Website Health','status'],['HTTP Playground','http-playground'],['The Decision Department','decisions']])assert.equal(await page.getByRole('link',{name:'Open '+title,exact:true}).getAttribute('href'),'https://'+host+'.giorgi.app/');
               for(const host of ['example-mcp','mcp','api'])assert.equal(await page.locator('a[href^="https://'+host+'.giorgi.app"]').count(),0);
               await page.keyboard.press('Meta+Period');
               await page.frameLocator('iframe[title="Giorgi account sign-in"]').getByRole('heading',{name:'Good to see you.',exact:true}).waitFor();
@@ -73,7 +74,7 @@ jobs:
               assert.equal(await page.locator('app-cat-sidekick,[data-cat-sprite],.cat-controls').count(),0);
               console.log('PASS live portfolio without the animated cat');
               console.log('PASS live GA consent and configured property (Google script stubbed)');
-              console.log('PASS live five-app gallery, correct HTTPS links, shared login modal and mobile layout');
+              console.log('PASS live seven-app gallery, correct HTTPS links, shared login modal and mobile layout');
             }finally{await browser.close();}
           })().catch(error=>{console.error(error);process.exitCode=1;});
           JS
