@@ -15,6 +15,17 @@ describe('Compiler explorer interactions',()=>{
     expect(focused).toEqual([expect.objectContaining({startLine:4,approximate:true})]);
     fixture.componentInstance.view.set('raw');fixture.detectChanges();expect(page.querySelector('.compiler-comment')).toBeNull();
   });
+  it('announces which generated instruction line is selected',()=>{
+    const fixture=create(),page=fixture.nativeElement as HTMLElement;
+    const lines=Array.from(page.querySelectorAll<HTMLButtonElement>('.generated-line:not(:disabled)'));
+    const selected=lines.find(line=>line.classList.contains('selected'));
+    const next=lines.find(line=>line!==selected);
+    expect(selected?.getAttribute('aria-pressed')).toBe('true');
+    expect(next).toBeDefined();
+    next?.click();fixture.detectChanges();
+    expect(next?.getAttribute('aria-pressed')).toBe('true');
+    expect(selected?.getAttribute('aria-pressed')).toBe('false');
+  });
   it('marks stale output and prevents old-source navigation after the editor changes',()=>{
     const fixture=create();const mapped=fixture.componentInstance.instructions().find(instruction=>instruction.sourceMatch);expect(mapped).toBeDefined();if(mapped)fixture.componentInstance.select(mapped);fixture.componentRef.setInput('source',fixtureSource+'\n// Edited');fixture.detectChanges();
     const page=fixture.nativeElement as HTMLElement;expect(page.querySelector('.stale-output')?.textContent).toContain('last compilation');

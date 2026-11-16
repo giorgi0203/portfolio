@@ -53,6 +53,7 @@ export class CompilerExplorerComponent {
   }
   select(instruction:CompilerInstruction){this.selectedId.set(instruction.id);this.copied.set(false);}
   selectLine(line:number){const match=this.instructions().find(instruction=>instruction.line===line);if(match)this.select(match);}
+  isSelectedLine(line:number){return this.selected()?.line===line;}
   selectPhase(phase:CompilerPhase|'all'){this.phase.set(phase);const first=this.filtered()[0];if(first)this.selectedId.set(first.id);}
   showSource(){const match=this.selected()?.sourceMatch;if(match&&!this.stale())this.sourceFocus.emit(match);}
   async copy(){const content=this.file()?.content;if(!content)return;try{await navigator.clipboard.writeText(content);this.copied.set(true);}catch{this.copied.set(false);}}
