@@ -141,6 +141,78 @@ export class StepperComponent {
   @Output() changed = new EventEmitter<number>();
 }`;
 
+const changeDetectionSource = `import { ChangeDetectionStrategy, Component, Input, signal } from '@angular/core';
+
+@Component({
+  selector: 'lab-profile-card',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: \`
+    <article>
+      <h3>Profile</h3>
+      <p id="profile-name">{{ profile.name }}</p>
+    </article>
+  \`
+})
+export class ProfileCardComponent {
+  @Input() profile = { name: '' };
+}
+
+@Component({
+  selector: 'app-demo',
+  standalone: true,
+  imports: [ProfileCardComponent],
+  template: \`
+    <h2>OnPush profile</h2>
+    <lab-profile-card [profile]="profile()" />
+    <button id="rename" (click)="rename()">Update profile</button>
+  \`
+})
+export class DemoComponent {
+  profile = signal({ name: 'Ada' });
+  rename() {
+    this.profile().name = 'Grace';
+    this.profile.update(value => value);
+  }
+}`;
+
+const renderingSource = `import { NgTemplateOutlet } from '@angular/common';
+import { Component, signal } from '@angular/core';
+
+@Component({
+  selector: 'app-demo',
+  standalone: true,
+  imports: [NgTemplateOutlet],
+  template: \`
+    <h2>Team notices</h2>
+    <ng-template #noticeCard let-notice="notice">
+      <article>
+        <h3>{{ notice?.title }}</h3>
+        <p>{{ notice?.message }}</p>
+      </article>
+    </ng-template>
+    <p>Notices: {{ notices().length }}</p>
+    <section>
+      @for (notice of notices(); track notice.id) {
+        <ng-container
+          [ngTemplateOutlet]="noticeCard"
+          [ngTemplateOutletContext]="{ $implicit: notice }"
+        ></ng-container>
+      } @empty {
+        <p id="empty">All caught up.</p>
+      }
+    </section>
+    <button id="dismiss" (click)="dismissFirst()">Dismiss first notice</button>
+  \`
+})
+export class DemoComponent {
+  notices = signal([
+    { id: 1, title: 'Release ready', message: 'The build is green.' },
+    { id: 2, title: 'Backup complete', message: 'The snapshot is saved.' }
+  ]);
+  dismissFirst() { this.notices.update(notices => notices.slice(1)); }
+}`;
+
 export const learningLessons: LearningLesson[] = [
   {
     id: 'signals',
@@ -269,6 +341,59 @@ export const learningLessons: LearningLesson[] = [
       { label: 'The parent starts with an empty total', kind: 'text', selector: 'body', expected: 'Total: 0' },
       { label: 'The parent uses the first child event payload', kind: 'click-text', selector: '#child-add', expected: 'Total: 2' },
       { label: 'The reusable child can emit again', kind: 'click-text', selector: '#child-add', expected: 'Total: 4' }
+    ]
+  },
+  {
+    id: 'change-detection',
+    title: 'Give OnPush a new identity',
+    topic: 'Change detection & OnPush',
+    minutes: 8,
+    description: 'See why a signal and an OnPush child both need a changed input reference.',
+    challenge: 'The parent mutates a profile in place, so the OnPush card keeps showing the old name. Replace the profile immutably so Angular can detect the input change.',
+    explanation: [
+      'The profile card uses ChangeDetectionStrategy.OnPush, so Angular checks it when an input reference changes or when the component itself is marked for checking.',
+      'The parent signal uses object identity to decide whether an update is new. Returning the same mutated object does not notify signal consumers.',
+      'Create a new profile object with the updated name. The signal then notifies the parent, and the changed input reference lets Angular check the OnPush child.',
+      'The DOM update happens through Angular change detection; manually editing the rendered element would not update the component state.'
+    ],
+    hints: [
+      'Look at the two lines in rename(): they mutate the current profile and return that same object.',
+      'Use profile.update() to return a new object with the name set to Grace.'
+    ],
+    source: changeDetectionSource,
+    solution: changeDetectionSource.replace(
+      `    this.profile().name = 'Grace';
+    this.profile.update(value => value);`,
+      `    this.profile.update(value => ({ ...value, name: 'Grace' }));`
+    ),
+    checks: [
+      { label: 'The OnPush card starts with Ada', kind: 'text', selector: '#profile-name', expected: 'Ada' },
+      { label: 'An immutable signal update refreshes the OnPush input', kind: 'click-text', selector: '#rename', expected: 'Grace' }
+    ]
+  },
+  {
+    id: 'rendering',
+    title: 'Render a template with context',
+    topic: 'Rendering & template outlets',
+    minutes: 8,
+    description: 'Render a reusable template for each item and pass its context explicitly.',
+    challenge: 'The notice template is instantiated for every item, but its text is blank. Read the implicit value supplied by ngTemplateOutletContext.',
+    explanation: [
+      'An ng-template declares a reusable embedded view; it does not render until an outlet instantiates it.',
+      'ngTemplateOutletContext supplies values to the embedded view. The $implicit property is exposed by a let-variable without a context-property name.',
+      'The @for block creates one outlet per notice and tracks each notice by its stable id.',
+      'When the signal removes items, Angular updates the repeated views. The @empty branch renders when no notices remain.'
+    ],
+    hints: [
+      'The outlet context has a $implicit value, not a property named notice.',
+      'Change the template declaration to bind the let-notice variable to the implicit context value.'
+    ],
+    source: renderingSource,
+    solution: renderingSource.replace('let-notice="notice"', 'let-notice'),
+    checks: [
+      { label: 'The first notice is rendered from the template context', kind: 'text', selector: 'body', expected: 'Release ready' },
+      { label: 'Removing a notice renders the next tracked item', kind: 'click-text', selector: '#dismiss', expected: 'Backup complete' },
+      { label: 'Removing the final notice renders the empty view', kind: 'click-text', selector: '#dismiss', expected: 'All caught up.' }
     ]
   }
 ];
