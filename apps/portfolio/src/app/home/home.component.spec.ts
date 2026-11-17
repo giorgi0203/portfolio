@@ -24,10 +24,11 @@ describe('Personal workshop', () => {
     ).toBe('https://smart-todolist.giorgi.app/');
     expect(page.querySelector('a[aria-label="Open HTTP Playground"]')?.getAttribute('href')).toBe('https://http-playground.giorgi.app/');
     expect(page.querySelector('a[aria-label="Open The Decision Department"]')?.getAttribute('href')).toBe('https://decisions.giorgi.app/');
+    expect(page.querySelector('a[aria-label="Open Bug Safari"]')?.getAttribute('href')).toBe('https://bug-safari.giorgi.app/');
     expect(page.querySelector('.hero-portrait')?.getAttribute('alt')).toContain(
       'Giorgi',
     );
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(7);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(8);
     for(const host of ['example-mcp','mcp','api']) expect(page.querySelector('a[href="https://'+host+'.giorgi.app/"]')).toBeNull();
   });
 
@@ -45,8 +46,9 @@ describe('Personal workshop', () => {
     ).not.toBeNull();
     expect(page.querySelector('[aria-label="Open HLS Inspector"]')).toBeNull();
     expect(page.querySelector('[aria-label="Open HTTP Playground"]')).not.toBeNull();
+    expect(page.querySelector('[aria-label="Open Bug Safari"]')).not.toBeNull();
     expect(page.querySelector('[aria-label="Open The Decision Department"]')).toBeNull();
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(5);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(6);
   });
 
   it('offers another idea for a future project', () => {

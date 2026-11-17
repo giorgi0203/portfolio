@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 370" fill="none">
+  <rect width="600" height="370" rx="20" fill="#e5ead8"/>
+  <path d="M24 28h552v314H24z" fill="#fbf8ee" stroke="#bfcaab"/>
+  <path d="M24 67h552M24 299h552" stroke="#d7dcc7"/>
+  <text x="44" y="51" fill="#597050" font-family="monospace" font-size="11" letter-spacing="2">FIELD NOTES / SPECIMEN 006</text>
+  <circle cx="551" cy="47" r="4" fill="#92ac63"/>
+  <g transform="rotate(-7 149 174)">
+    <rect x="48" y="87" width="198" height="191" rx="5" fill="#edf0df" stroke="#c0c9ab"/>
+    <path d="M61 101h23m-23 0v22m170-22h-22m22 0v22M61 264h23m-23 0v-22m170 22h-22m22 0v-22" stroke="#a7b78d"/>
+    <circle cx="148" cy="177" r="64" stroke="#bdc7a8" stroke-dasharray="3 5"/>
+    <g stroke="#304d3a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m127 161-19-12-15 3m34 26-26 1-13 12m39 0-19 20-17-2m77-48 19-12 15 3m-34 26 26 1 13 12m-39 0 19 20 17-2"/>
+      <path d="m137 144-5-18-8-6m34 24 5-18 8-6"/>
+      <ellipse cx="148" cy="183" rx="26" ry="36" fill="#bfd783"/>
+      <path d="M148 151v66m-22-40h44"/>
+      <path d="M133 151q0-16 15-16t15 16" fill="#446449"/>
+      <circle cx="142" cy="146" r="2" fill="#f7f5e9" stroke="none"/>
+      <circle cx="154" cy="146" r="2" fill="#f7f5e9" stroke="none"/>
+      <path d="m138 190 4 4m12 8 4-4" stroke-width="2"/>
+    </g>
+    <text x="148" y="253" text-anchor="middle" fill="#597050" font-family="monospace" font-size="9" letter-spacing="1">ONE VERY SNEAKY BUG</text>
+  </g>
+  <g transform="rotate(2 408 176)">
+    <rect x="267" y="98" width="288" height="170" rx="12" fill="#253b30"/>
+    <path d="M268 126h286" stroke="#4c6150"/>
+    <g fill="#849b70"><circle cx="283" cy="112" r="3"/><circle cx="295" cy="112" r="3"/><circle cx="307" cy="112" r="3"/></g>
+    <text x="539" y="116" text-anchor="end" fill="#aec29d" font-family="monospace" font-size="9">safari.spec.js</text>
+    <text x="284" y="153" fill="#e8eadb" font-family="monospace" font-size="12">numbers.sort((a, b) =&gt; a - b)</text>
+    <path d="M284 168h252" stroke="#4c6150"/>
+    <text x="284" y="189" fill="#d3e99f" font-family="monospace" font-size="11">✓ Numbers in the right order</text>
+    <text x="284" y="210" fill="#d3e99f" font-family="monospace" font-size="11">✓ Original list stays intact</text>
+    <rect x="283" y="228" width="149" height="23" rx="11" fill="#d6ec9f"/>
+    <text x="358" y="243" text-anchor="middle" fill="#304d3a" font-family="monospace" font-size="10">SPECIMEN UNDERSTOOD</text>
+  </g>
+  <text x="44" y="328" fill="#263c2c" font-family="sans-serif" font-weight="700" font-size="25">Bug Safari</text>
+  <text x="553" y="326" text-anchor="end" fill="#6d7d5a" font-family="monospace" font-size="10">SMALL BUGS. BIG AHA MOMENTS.</text>
+  <circle cx="541" cy="83" r="16" fill="#e9a084" stroke="#b97a60"/>
+  <path d="m535 83 4 4 8-9" stroke="#614e3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
