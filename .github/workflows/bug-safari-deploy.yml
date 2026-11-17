@@ -10,23 +10,62 @@ concurrency:
   group: giorgi-bug-safari-deployment
   cancel-in-progress: false
 jobs:
-  inspect:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 12
     steps:
-      - name: Inspect static-host prerequisites
+      # Release artifacts are immutable and were built and browser-tested first.
+      - name: Install verified Bug Safari with scoped rollback
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          command_timeout: 2m
+          command_timeout: 7m
           script: |
             set -eu
-            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-            nginx -t
-            certbot --version
-            df -h /var
-            ls /etc/nginx/sites-enabled/
-            for host in giorgi.app angular-compiler.giorgi.app http-playground.giorgi.app decisions.giorgi.app; do curl -fsS --max-time 15 "https://$host/" -o /dev/null;printf 'HTTPS verified: %s\n' "$host";done
+            stage=/var/tmp/giorgi-bug-safari-${{ github.sha }}
+            mkdir -p "$stage"
+            trap 'rm -rf -- "$stage"' EXIT
+            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/03d561c19cf31a6f96ff6d91b4ba27c809527ecd/bug-safari-deploy.tar.gz -o "$stage/bundle.tar.gz"
+            printf '%s  %s\n' 'bd6a690e7f0e1857c0b56212eab923841d7eb386f4ebf5e9278d13bca600f57c' "$stage/bundle.tar.gz" | sha256sum --check --strict
+            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
+            sudo -n bash "$stage/deploy/install-bug-safari.sh" "$stage" ${{ github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          ref: 76f358f8eabe3dafb97903127395a6de53deb00a
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install isolated browser test dependencies
+        run: npm install --prefix "$RUNNER_TEMP/bug-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Verify real debugging journeys over public HTTPS
+        env:
+          BUG_SAFARI_URL: https://bug-safari.giorgi.app
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/bug-browser/node_modules/playwright"
+          node scripts/bug-safari-browser.cjs
+      - name: Verify public execution policy and SEO assets
+        run: |
+          node <<'JS'
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const base='https://bug-safari.giorgi.app';
+            const page=await fetch(base+'/');assert.equal(page.status,200);
+            const html=await page.text(),policy=page.headers.get('content-security-policy')||'';
+            assert.ok(html.includes('Bug Safari'));assert.ok(html.includes('rel="canonical" href="https://bug-safari.giorgi.app/"'));
+            assert.ok(!policy.includes("'unsafe-eval'"));assert.ok(policy.includes("connect-src 'none'"));
+            const worker=await fetch(base+'/runner.js');assert.equal(worker.status,200);
+            const workerPolicy=worker.headers.get('content-security-policy')||'';
+            for(const required of ["script-src 'unsafe-eval'","connect-src 'none'","worker-src 'none'"])assert.ok(workerPolicy.includes(required));
+            assert.ok((await(await fetch(base+'/robots.txt')).text()).includes(base+'/sitemap.xml'));
+            assert.ok((await(await fetch(base+'/sitemap.xml')).text()).includes('<loc>'+base+'/</loc>'));
+            console.log('PASS public HTTPS, main/worker execution policies and SEO assets');
+          })().catch(error=>{console.error(error);process.exitCode=1});
+          JS
+  publish-portfolio:
+    needs: deploy
+    uses: ./.github/workflows/portfolio-deploy.yml
+    secrets: inherit
