@@ -1,0 +1,32 @@
+name: Deploy Bug Safari
+on:
+  push:
+    branches: [codex/bug-safari, main]
+    paths: ['.github/workflows/bug-safari-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-bug-safari-deployment
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Inspect static-host prerequisites
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            nginx -t
+            certbot --version
+            df -h /var
+            ls /etc/nginx/sites-enabled/
+            for host in giorgi.app angular-compiler.giorgi.app http-playground.giorgi.app decisions.giorgi.app; do curl -fsS --max-time 15 "https://$host/" -o /dev/null;printf 'HTTPS verified: %s\n' "$host";done
