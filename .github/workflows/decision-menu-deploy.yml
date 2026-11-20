@@ -1,0 +1,35 @@
+name: Decision Department menu deployment
+on:
+  push:
+    branches: [codex/decision-menu, main]
+    paths: ['.github/workflows/decision-menu-deploy.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: giorgi-decision-menu-deployment
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Inspect menu deployment prerequisites
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          command_timeout: 2m
+          script: |
+            set -eu
+            ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
+            nginx -t
+            systemctl show giorgi-decisions giorgi-identity -p ActiveState -p WorkingDirectory
+            readlink -f /var/www/giorgi-fun-apps/current
+            readlink -f /var/www/giorgi-identity/current
+            test -s /etc/smart-todolist/ai.json
+            /opt/smart-todo-node-24.22.1/bin/node --version
+            df -h /var
+            for host in decisions.giorgi.app auth.giorgi.app giorgi.app smart-todolist.giorgi.app http-playground.giorgi.app;do curl -fsS --max-time 15 "https://$host/" -o /dev/null;printf 'HTTPS verified: %s\n' "$host";done
