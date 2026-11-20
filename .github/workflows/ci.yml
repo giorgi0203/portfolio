@@ -35,6 +35,21 @@ jobs:
       # Build the portfolio app for production
       - run: npx nx build portfolio --configuration=production
 
+      - name: Check menu prices, shared rooms and the Decision production build
+        run: |
+          npx nx test decision-department
+          node_modules/.bin/tsc -p apps/decision-department/tsconfig.json
+          npx nx build decision-department
+
+      - name: Check menu planning and existing room interactions in Chrome
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/menu-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/menu-browser/node_modules/playwright"
+          node scripts/decision-menu-browser.cjs
+          NEW_APPS_ONLY=decisions node scripts/new-apps-browser.cjs
+
       # Deployment is owned by portfolio-deploy.yml; never stop shared Nginx here.
       # Upload build artifacts
       - uses: actions/upload-artifact@v4

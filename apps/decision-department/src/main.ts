@@ -1,4 +1,5 @@
 import './style.css';
+import { mountMenu } from './menu';
 
 type Choice = { id: string; text: string; votes: number };
 type Spin = {
@@ -104,6 +105,7 @@ let wheelAnimation: Animation | undefined;
 let shownSpin = '';
 let announcedSpin = '';
 let creating = false;
+let menuPlanner: { refreshRoomState(): void } | undefined;
 const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const storageKey = (id: string) => `decision-department:room:${id}`;
 const publicInvite = (id: string) =>
@@ -387,6 +389,7 @@ function updateChoices(next: Room) {
   for (const row of existing.values()) row.remove();
 }
 function updateControls() {
+  menuPlanner?.refreshRoomState();
   if (!room) return;
   const host = !!credentials.hostToken,
     joined = !!credentials.participantToken,
@@ -782,6 +785,33 @@ window.addEventListener('online', () => {
   if (currentId) void refreshRoom();
 });
 window.addEventListener('offline', () => setConnection('You’re offline', true));
+const menuContainer = document.createElement('section');
+menuContainer.id = 'menu';
+menuContainer.setAttribute('aria-label', 'Menu planner');
+$('.masthead').after(menuContainer);
+$('.workspace').id = 'decision-room';
+function canAddMenuChoice() {
+  return !!room && !!credentials.participantToken && !room.locked &&
+    !activeSpin() && !busy && room.choices.length < 32;
+}
+menuPlanner = mountMenu(menuContainer, {
+  canAddToRoom: canAddMenuChoice,
+  async addToRoom(value: string) {
+    if (!canAddMenuChoice()) throw new Error('Create or join an open room below before sharing a combination.');
+    if (!value.trim() || value.length > 80) throw new Error('Keep the shared choice under 80 characters.');
+    const id = currentId, version = generation;
+    busy = true;
+    updateControls();
+    try {
+      const reply = await api(`/api/rooms/${encodeURIComponent(id)}/choices`, 'POST', { text: value }, 'participant');
+      if (version !== generation || id !== currentId) throw new Error('The room changed. Please try again.');
+      accept(reply.room);
+      toast('Meal combination added to the committee’s shortlist.');
+    } finally {
+      if (version === generation) { busy = false; updateControls(); schedulePoll(); }
+    }
+  },
+});
 const match = location.pathname.match(/^\/room\/([A-Za-z0-9_-]{20,80})\/?$/);
 const queryId = new URLSearchParams(location.search).get('room');
 if (match) beginRoom(match[1]);
