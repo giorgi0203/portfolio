@@ -9,6 +9,7 @@ import {
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createMenuService } from './menu.mjs';
 
 const DAY = 86400000;
 const token = () => randomBytes(32).toString('base64url');
@@ -55,6 +56,7 @@ export function createDecisionServer({
   spinDurationMs = 5000,
   trustProxy = process.env.TRUST_PROXY === '1',
   maxRooms = 2000,
+  menu = {},
 } = {}) {
   const allowedOrigin = new URL(origin).origin;
   if (databasePath !== ':memory:')
@@ -85,6 +87,12 @@ export function createDecisionServer({
       PRIMARY KEY(room_id, participant_id)
     );`);
   const prepare = (sql) => db.prepare(sql);
+  const menuService = createMenuService({
+    db,
+    origin: allowedOrigin,
+    clock,
+    ...menu,
+  });
   const cleanup = () =>
     prepare('DELETE FROM rooms WHERE expires <= ?').run(clock());
   cleanup();
@@ -225,9 +233,19 @@ export function createDecisionServer({
   }
   const server = http.createServer(async (req, res) => {
     try {
-      const path = new URL(req.url, 'http://localhost').pathname;
+      const url = new URL(req.url, 'http://localhost');
+      const path = url.pathname;
       if (path === '/health' && req.method === 'GET')
         return send(res, 200, { ok: true, service: 'decision-department' });
+      if (path.startsWith('/api/menu/') || path.startsWith('/api/auth/sso/')) {
+        const menuIp =
+          trustProxy && typeof req.headers['x-real-ip'] === 'string'
+            ? req.headers['x-real-ip']
+            : req.socket.remoteAddress || 'unknown';
+        limit(menuIp, 'menu', 60, 60000);
+        await menuService.handle(req, res, url);
+        return;
+      }
       const match = path.match(
         /^\/api\/rooms(?:\/([A-Za-z0-9_-]+)(?:\/(join|choices|vote|spin|reset|lock))?)?$/u,
       );
@@ -439,13 +457,14 @@ export function createDecisionServer({
         });
     }
   });
-  server.requestTimeout = 10000;
+  server.requestTimeout = 35000;
   server.headersTimeout = 8000;
   server.keepAliveTimeout = 5000;
   let closed = false;
   async function close() {
     if (closed) return;
     closed = true;
+    menuService.close();
     clearInterval(cleanupTimer);
     if (server.listening)
       await new Promise((resolve, reject) => {
