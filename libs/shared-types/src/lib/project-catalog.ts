@@ -55,4 +55,15 @@ export const projectCatalog: CatalogProject[] = [
     category: 'play',
     label: 'OFFICIALLY UNDECIDED',
   },
+  {
+    id: 11,
+    title: 'Bug Safari',
+    description: 'Track down JavaScript bugs in editable debugging challenges. Run real tests, uncover hints, and collect your findings in a field journal.',
+    technologies: ['TypeScript', 'JavaScript', 'Web Workers'],
+    githubUrl: 'https://github.com/giorgi0203/portfolio/tree/codex/bug-safari/apps/bug-safari',
+    liveUrl: 'https://bug-safari.giorgi.app/',
+    imageUrl: '/assets/bug-safari.svg',
+    category: 'useful',
+    label: 'DEBUGGING IN THE WILD',
+  },
 ];

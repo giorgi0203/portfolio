@@ -35,6 +35,21 @@ jobs:
       # Build the portfolio app for production
       - run: npx nx build portfolio --configuration=production
 
+      - name: Check Bug Safari behavior, types and production build
+        run: |
+          npx nx test bug-safari
+          node_modules/.bin/tsc -p apps/bug-safari/tsconfig.json
+          npx nx build bug-safari
+
+      - name: Check Bug Safari interactions and portfolio consent in Chrome
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/bug-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/bug-browser/node_modules/playwright"
+          node scripts/bug-safari-browser.cjs
+          node scripts/seo-analytics-browser.cjs
+
       - name: Check menu prices, shared rooms and the Decision production build
         run: |
           npx nx test decision-department
