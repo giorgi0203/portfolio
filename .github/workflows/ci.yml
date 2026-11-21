@@ -35,7 +35,6 @@ jobs:
       # Build the portfolio app for production
       - run: npx nx build portfolio --configuration=production
 
-<<<<<<< HEAD
       - name: Check Bug Safari behavior, types and production build
         run: |
           npx nx test bug-safari
@@ -50,7 +49,7 @@ jobs:
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/bug-browser/node_modules/playwright"
           node scripts/bug-safari-browser.cjs
           node scripts/seo-analytics-browser.cjs
-=======
+
       - name: Check menu prices, shared rooms and the Decision production build
         run: |
           npx nx test decision-department
@@ -65,7 +64,6 @@ jobs:
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/menu-browser/node_modules/playwright"
           node scripts/decision-menu-browser.cjs
           NEW_APPS_ONLY=decisions node scripts/new-apps-browser.cjs
->>>>>>> origin/main
 
       # Deployment is owned by portfolio-deploy.yml; never stop shared Nginx here.
       # Upload build artifacts
