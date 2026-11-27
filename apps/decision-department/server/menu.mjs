@@ -48,6 +48,7 @@ export function createMenuService({
   db,
   origin,
   clock = Date.now,
+  supraOrigin = 'https://split-supra.giorgi.app',
   identityPublicUrl = process.env.AUTH_PUBLIC_URL || 'https://auth.giorgi.app',
   identityInternalUrl = process.env.AUTH_INTERNAL_URL ||
     'http://127.0.0.1:3100',
@@ -112,8 +113,8 @@ export function createMenuService({
     res.writeHead(303, { Location: location });
     res.end();
   }
-  async function body(req, maximum) {
-    if (req.headers.origin !== appOrigin)
+  async function body(req, maximum, expectedOrigin = appOrigin) {
+    if (req.headers.origin !== expectedOrigin)
       fail(403, 'Requests must come from this app.');
     if (
       !/^application\/json(?:\s*;|$)/iu.test(req.headers['content-type'] || '')
@@ -205,7 +206,7 @@ export function createMenuService({
       if (count(subject, now - DAY) >= limits.daily)
         fail(
           429,
-          `Your ${limits.daily} menu scans for the last 24 hours are used. Enter items manually or try later.`,
+          `Your ${limits.daily} photo scans for the last 24 hours are used. Enter items manually or try later.`,
           3600,
         );
       if (
@@ -217,7 +218,7 @@ export function createMenuService({
       )
         fail(
           429,
-          'Today’s shared menu scanning limit is reached. You can still enter items manually.',
+          'Today’s shared photo scanning limit is reached. You can still enter items manually.',
           3600,
         );
       if (count(subject, now - 60_000))
@@ -240,15 +241,49 @@ export function createMenuService({
   }
   async function handle(req, res, url) {
     const path = url.pathname;
-    if (!path.startsWith('/api/menu/') && !path.startsWith('/api/auth/sso/'))
+    const receipt =
+      path === '/api/receipt/session' || path === '/api/receipt/analyze';
+    if (
+      !receipt &&
+      !path.startsWith('/api/menu/') &&
+      !path.startsWith('/api/receipt/') &&
+      !path.startsWith('/api/auth/sso/')
+    )
       return false;
     try {
+      const expectedOrigin = receipt ? supraOrigin : appOrigin;
+      if (receipt) {
+        res.setHeader('Vary', 'Origin');
+        if (req.headers.origin !== expectedOrigin) {
+          req.resume();
+          fail(403, 'Receipt scanning must come from Split the Supra.');
+        }
+        res.setHeader('Access-Control-Allow-Origin', expectedOrigin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        if (req.method === 'OPTIONS') {
+          headers(res);
+          res.setHeader(
+            'Access-Control-Allow-Methods',
+            path.endsWith('/session') ? 'GET' : 'POST',
+          );
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+          res.writeHead(204);
+          res.end();
+          return true;
+        }
+      }
       if (stopped)
         fail(503, 'The department is restarting. Please try again shortly.');
-      if (path === '/api/menu/session' && req.method === 'GET') {
+      if (
+        (path === '/api/menu/session' || path === '/api/receipt/session') &&
+        req.method === 'GET'
+      ) {
         const current = await user(req);
         send(res, 200, {
-          user: current,
+          user:
+            receipt && current
+              ? { name: current.name, emailVerified: current.emailVerified }
+              : current,
           configured: !!configuration(),
           limits,
           ...(current ? { remaining: remaining(current.id) } : {}),
@@ -258,7 +293,9 @@ export function createMenuService({
           verifier = randomBytes(32).toString('base64url');
         const returnTo = url.searchParams.get('returnTo') || '/';
         const safePath =
-          returnTo === '/' || /^\/room\/[A-Za-z0-9_-]{32}$/u.test(returnTo)
+          returnTo === '/' ||
+          returnTo === '/supra' ||
+          /^\/room\/[A-Za-z0-9_-]{32}$/u.test(returnTo)
             ? returnTo
             : '/';
         db.prepare('DELETE FROM menu_sso_pending WHERE expires<=?').run(
@@ -312,7 +349,12 @@ export function createMenuService({
         if (!result || !validUser(result.user) || !isToken(result.sessionToken))
           fail(400, 'Sign-in could not be completed. Please start again.');
         setCookie(res, cookieName, result.sessionToken, 14 * 24 * 60 * 60);
-        redirect(res, row.return_path + '#menu');
+        redirect(
+          res,
+          row.return_path === '/supra'
+            ? supraOrigin + '/'
+            : row.return_path + '#menu',
+        );
       } else if (path === '/api/menu/logout' && req.method === 'POST') {
         const data = await body(req, 8192);
         if (Object.keys(data).length)
@@ -325,9 +367,12 @@ export function createMenuService({
           });
         setCookie(res, cookieName, '', 0);
         send(res, 200, { ok: true });
-      } else if (path === '/api/menu/analyze' && req.method === 'POST') {
+      } else if (
+        (path === '/api/menu/analyze' || path === '/api/receipt/analyze') &&
+        req.method === 'POST'
+      ) {
         // Reject cross-site requests before receiving an image or checking a session.
-        if (req.headers.origin !== appOrigin) {
+        if (req.headers.origin !== expectedOrigin) {
           req.resume();
           fail(403, 'Requests must come from this app.');
         }
@@ -336,14 +381,14 @@ export function createMenuService({
           req.resume();
           fail(
             401,
-            'Sign in with your Giorgi account to scan a menu. Manual entry is always available.',
+            'Sign in with your Giorgi account to scan a photo. Manual entry is always available.',
           );
         }
         if (!current.emailVerified) {
           req.resume();
           fail(
             403,
-            'Verify your email in your Giorgi account before scanning a menu. Manual entry is always available.',
+            'Verify your email in your Giorgi account before scanning a photo. Manual entry is always available.',
           );
         }
         const config = configuration();
@@ -354,11 +399,11 @@ export function createMenuService({
             'Photo scanning is not configured right now. You can still enter items manually.',
           );
         }
-        const data = await body(req, MAX_MENU_BODY);
+        const data = await body(req, MAX_MENU_BODY, expectedOrigin);
         if (Object.keys(data).length !== 1 || !Object.hasOwn(data, 'image'))
           fail(400, 'Send one menu photo.');
         const image = validateMenuImage(data.image);
-        const key = hash(current.id + ':' + hash(image.bytes));
+        const key = hash(path + ':' + current.id + ':' + hash(image.bytes));
         const previous = cached(key);
         if (previous) {
           send(res, 200, {
@@ -371,12 +416,12 @@ export function createMenuService({
         if (active.has(current.id))
           fail(
             409,
-            'Your other menu photo is still being read. Wait for it or cancel it first.',
+            'Your other photo is still being read. Wait for it or cancel it first.',
           );
         if (active.size >= 2)
           fail(
             503,
-            'Two menu scans are already running. Please try again shortly.',
+            'Two photo scans are already running. Please try again shortly.',
             10,
           );
         reserve(current.id);
@@ -389,6 +434,7 @@ export function createMenuService({
         res.once('close', onClose);
         try {
           const extracted = await extractMenu({
+            receipt,
             image: image.dataUrl,
             configuration: config,
             fetcher: providerFetch,
@@ -407,6 +453,8 @@ export function createMenuService({
         }
       } else if (
         [
+          '/api/receipt/session',
+          '/api/receipt/analyze',
           '/api/menu/session',
           '/api/menu/analyze',
           '/api/menu/logout',

@@ -543,3 +543,109 @@ test('missing configuration is safe for anonymous/manual flows; untrusted model 
   );
   assert.equal(validateMenuImage(image()).bytes.length, PNG.length);
 });
+
+const RECEIPT_ORIGIN = 'https://split-supra.giorgi.app';
+const RECEIPT = {
+  currency: 'GEL',
+  items: [
+    { name: 'ხინკალი', quantity: 4, unitPrice: '2,50', lineTotal: '10.00' },
+  ],
+  fee: null,
+  total: '10.00',
+  warnings: [],
+};
+
+test('only Split the Supra can read a credentialed receipt session and use the shared photo allowance', async (t) => {
+  const app = await fixture(t, {
+    provider: (_url, init) => {
+      const prompt = JSON.parse(init.body).messages[0].content;
+      return vision(prompt.includes('receipt') ? RECEIPT : MENU);
+    },
+  });
+  const cookie = '__Host-giorgi_decisions=' + TOKEN;
+  const opts = {
+    body: { image: image() },
+    cookie,
+    method: 'POST',
+    origin: RECEIPT_ORIGIN,
+  };
+  const wrong = await app.call('/api/receipt/analyze', {
+    ...opts,
+    origin: 'https://other.test',
+  });
+  assert.equal(wrong.status, 403);
+  assert.equal(wrong.headers.get('access-control-allow-origin'), null);
+  const preflight = await app.call('/api/receipt/analyze', {
+    method: 'OPTIONS',
+    origin: RECEIPT_ORIGIN,
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(
+    preflight.headers.get('access-control-allow-credentials'),
+    'true',
+  );
+  assert.equal(
+    preflight.headers.get('access-control-allow-origin'),
+    RECEIPT_ORIGIN,
+  );
+  let session = await app.call('/api/receipt/session', {
+    cookie,
+    headers: { Origin: RECEIPT_ORIGIN },
+  });
+  assert.deepEqual(session.body.user, { name: USER.name, emailVerified: true });
+  assert.equal(session.body.remaining, 3);
+  assert.equal(
+    (await app.call('/api/receipt/analyze', { ...opts, cookie: '' })).status,
+    401,
+  );
+  app.users.set(TOKEN, { ...USER, emailVerified: false });
+  assert.equal((await app.call('/api/receipt/analyze', opts)).status, 403);
+  app.users.set(TOKEN, USER);
+  const scanned = await app.call('/api/receipt/analyze', opts);
+  assert.equal(scanned.status, 200);
+  assert.equal(scanned.body.items[0].unitPrice, '2.50');
+  assert.equal(scanned.body.remaining, 2);
+  assert.equal(
+    (await app.call('/api/receipt/analyze', opts)).body.cached,
+    true,
+  );
+  assert.equal(
+    (await app.scan()).status,
+    429,
+    'Same photo must not leak receipt cache into menus or bypass shared minute limit',
+  );
+  app.advance(60_001);
+  const menu = await app.scan();
+  assert.equal(menu.status, 200);
+  assert.equal(menu.body.items[0].category, 'main');
+  assert.equal(app.providerCalls(), 2);
+  session = await app.call('/api/receipt/session', {
+    cookie,
+    headers: { Origin: RECEIPT_ORIGIN },
+  });
+  assert.equal(session.body.remaining, 1);
+});
+
+test('unreadable and malformed receipt data fail closed; sign-in returns only to the fixed Split site', async (t) => {
+  const app = await fixture(t, {
+    provider: () =>
+      vision({ ...RECEIPT, items: [{ ...RECEIPT.items[0], quantity: -3 }] }),
+  });
+  const scan = await app.call('/api/receipt/analyze', {
+    method: 'POST',
+    origin: RECEIPT_ORIGIN,
+    cookie: '__Host-giorgi_decisions=' + TOKEN,
+    body: { image: image() },
+  });
+  assert.equal(scan.status, 502);
+  const start = await app.call('/api/auth/sso/start?returnTo=/supra');
+  const state = new URL(start.headers.get('location')).searchParams.get(
+    'state',
+  );
+  const callback = await app.call(
+    '/api/auth/sso/callback?code=' + 'a'.repeat(64) + '&state=' + state,
+    { cookie: start.headers.get('set-cookie').split(';')[0] },
+  );
+  assert.equal(callback.status, 303);
+  assert.equal(callback.headers.get('location'), RECEIPT_ORIGIN + '/');
+});

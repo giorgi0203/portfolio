@@ -1,0 +1,125 @@
+name: Publish Same Frame and Split the Supra
+on:
+  push:
+    branches: [codex/five-playground-updates, main]
+    paths:
+      - 'apps/same-frame/**'
+      - 'apps/split-supra/**'
+      - 'apps/decision-department/server/**'
+      - 'apps/decision-department/shared/split*'
+      - 'deploy/install-supra-frame.sh'
+      - 'deploy/photo-table-sites.py'
+      - 'deploy/verify-supra-receipt.py'
+      - '.github/workflows/photo-table-deploy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: photo-table-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NX_DAEMON: 'false'
+      CHROME_PATH: /usr/bin/google-chrome
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --prefix "$RUNNER_TEMP/browser" --no-audit --no-fund --ignore-scripts playwright@1.56.1
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Build and verify both apps and the gallery
+        run: |
+          node_modules/.bin/tsc -p apps/same-frame/tsconfig.json
+          node_modules/.bin/tsc -p apps/split-supra/tsconfig.json
+          npx nx run-many -t test -p same-frame split-supra decision-department portfolio --parallel=2
+          npx nx run-many -t build -p same-frame split-supra portfolio decision-department --parallel=2
+          node scripts/same-frame-browser.cjs
+          node scripts/split-supra-browser.cjs
+          node scripts/seo-analytics-browser.cjs
+      - name: Package tested apps
+        id: package
+        run: |
+          set -eu
+          tmp="$RUNNER_TEMP/photo-table"
+          mkdir -p "$tmp/decision" "$tmp/deploy"
+          cp -a dist/apps/{same-frame,split-supra,portfolio} "$tmp/"
+          cp -a dist/apps/decision-department/{server,shared} "$tmp/decision/"
+          cp deploy/{install-supra-frame.sh,photo-table-sites.py,verify-supra-receipt.py} apps/decision-department/tests/fixtures/receipt.png "$tmp/deploy/"
+          tar czf photo-table.tgz -C "$tmp" .
+          echo "checksum=$(sha256sum photo-table.tgz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Stage release
+        uses: appleboy/scp-action@8a92fcdb1eb4ffbf538b2fa286739760aac8a95b
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          source: photo-table.tgz
+          target: .cache/giorgi-photo-table/${{ env.RELEASE_ID }}
+      - name: Install apps and verify one synthetic receipt
+        id: activate
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        env:
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID,CHECKSUM
+          command_timeout: 6m
+          script: |
+            set -eu
+            cd "$HOME/.cache/giorgi-photo-table/$RELEASE_ID"
+            stage=$(pwd -P)
+            trap 'rm -rf -- "$stage"' EXIT
+            printf '%s  %s\n' "$CHECKSUM" photo-table.tgz | sha256sum --check --strict
+            tar xzf photo-table.tgz --no-same-owner
+            sudo -n bash deploy/install-supra-frame.sh install "$RELEASE_ID"
+      - name: Test both HTTPS sites and Decision compatibility in Chromium
+        env:
+          SAME_FRAME_URL: https://same-frame.giorgi.app
+          SUPRA_URL: https://split-supra.giorgi.app
+          DECISIONS_URL: https://decisions.giorgi.app
+        run: |
+          node scripts/same-frame-browser.cjs
+          node scripts/split-supra-browser.cjs
+          node scripts/decision-menu-browser.cjs
+      - name: Publish verified gallery entries
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID
+          script: sudo -n bash "/var/backups/giorgi-photo-table/$RELEASE_ID/installer" gallery "$RELEASE_ID"
+      - name: Verify published gallery
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const html=await (await fetch('https://giorgi.app/')).text();
+          for(const host of ['same-frame','split-supra','bug-safari'])assert.ok(html.includes('https://'+host+'.giorgi.app/'),host);
+          console.log('Verified public gallery links.');
+          JS
+      - name: Restore previous release on verification failure
+        if: failure() && steps.activate.outcome == 'success'
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID
+          script: sudo -n bash "/var/backups/giorgi-photo-table/$RELEASE_ID/installer" rollback "$RELEASE_ID"

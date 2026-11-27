@@ -1,52 +1,23 @@
 import http from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
-import {
-  createHash,
-  randomBytes,
-  randomInt,
-  timingSafeEqual,
-} from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createMenuService } from './menu.mjs';
+import { createSupraRooms } from './supra.mjs';
+import {
+  digest,
+  equalHash,
+  fail,
+  identifier,
+  Problem,
+  text,
+  token,
+  validToken,
+} from './room-utils.mjs';
 
 const DAY = 86400000;
-const token = () => randomBytes(32).toString('base64url');
-const identifier = (bytes = 12) => randomBytes(bytes).toString('base64url');
-const digest = (value) => createHash('sha256').update(value).digest('hex');
-class Problem extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-const fail = (status, message) => {
-  throw new Problem(status, message);
-};
-function text(value, maximum, label) {
-  if (
-    typeof value !== 'string' ||
-    !value.trim() ||
-    value.trim().length > maximum ||
-    /[\u0000-\u001f\u007f]/u.test(value)
-  )
-    fail(400, `${label} must be 1–${maximum} characters.`);
-  return value.trim();
-}
-function validToken(value) {
-  return typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/u.test(value);
-}
-function equalHash(expected, value) {
-  return (
-    validToken(value) &&
-    timingSafeEqual(
-      Buffer.from(expected, 'hex'),
-      Buffer.from(digest(value), 'hex'),
-    )
-  );
-}
-
 /** An isolated, low-stakes guest-room service. Invite links are bearer access. */
 export function createDecisionServer({
   databasePath = process.env.DATABASE_PATH ||
@@ -56,9 +27,11 @@ export function createDecisionServer({
   spinDurationMs = 5000,
   trustProxy = process.env.TRUST_PROXY === '1',
   maxRooms = 2000,
+  supraOrigin = process.env.SUPRA_ORIGIN || 'https://split-supra.giorgi.app',
   menu = {},
 } = {}) {
   const allowedOrigin = new URL(origin).origin;
+  const splitOrigin = new URL(supraOrigin).origin;
   if (databasePath !== ':memory:')
     mkdirSync(dirname(resolve(databasePath)), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(databasePath);
@@ -90,11 +63,15 @@ export function createDecisionServer({
   const menuService = createMenuService({
     db,
     origin: allowedOrigin,
+    supraOrigin: splitOrigin,
     clock,
     ...menu,
   });
-  const cleanup = () =>
+  const supra = createSupraRooms({ db, clock, maxRooms, transaction });
+  const cleanup = () => {
     prepare('DELETE FROM rooms WHERE expires <= ?').run(clock());
+    supra.cleanup();
+  };
   cleanup();
   const cleanupTimer = setInterval(cleanup, 60000);
   cleanupTimer.unref();
@@ -191,14 +168,14 @@ export function createDecisionServer({
       throw error;
     }
   }
-  async function json(req) {
-    if (req.headers.origin !== allowedOrigin)
+  async function json(req, expectedOrigin = allowedOrigin, maxBody = 8192) {
+    if (req.headers.origin !== expectedOrigin)
       fail(403, 'Requests must come from this app.');
     if (
       !/^application\/json(?:\s*;|$)/iu.test(req.headers['content-type'] || '')
     )
       fail(415, 'Send application/json.');
-    if (Number(req.headers['content-length'] || 0) > 8192) {
+    if (Number(req.headers['content-length'] || 0) > maxBody) {
       req.resume();
       fail(413, 'That request is too large.');
     }
@@ -206,7 +183,7 @@ export function createDecisionServer({
       chunks = [];
     for await (const chunk of req) {
       total += chunk.length;
-      if (total > 8192) {
+      if (total > maxBody) {
         req.resume();
         fail(413, 'That request is too large.');
       }
@@ -237,24 +214,45 @@ export function createDecisionServer({
       const path = url.pathname;
       if (path === '/health' && req.method === 'GET')
         return send(res, 200, { ok: true, service: 'decision-department' });
-      if (path.startsWith('/api/menu/') || path.startsWith('/api/auth/sso/')) {
-        const menuIp =
-          trustProxy && typeof req.headers['x-real-ip'] === 'string'
-            ? req.headers['x-real-ip']
-            : req.socket.remoteAddress || 'unknown';
-        limit(menuIp, 'menu', 60, 60000);
+      const ip =
+        trustProxy && typeof req.headers['x-real-ip'] === 'string'
+          ? req.headers['x-real-ip']
+          : req.socket.remoteAddress || 'unknown';
+      if (
+        path.startsWith('/api/menu/') ||
+        path.startsWith('/api/receipt/') ||
+        path.startsWith('/api/auth/sso/')
+      ) {
+        limit(ip, 'menu', 60, 60000);
         await menuService.handle(req, res, url);
         return;
+      }
+      if (path.startsWith('/api/supra/')) {
+        const isRead = req.method === 'GET';
+        limit(
+          ip,
+          isRead ? 'supra-read' : 'supra-write',
+          isRead ? 600 : 180,
+          60000,
+        );
+        if (path === '/api/supra/rooms' && req.method === 'POST')
+          limit(ip, 'supra-create', 12, 3600000);
+        if (path.endsWith('/join') && req.method === 'POST')
+          limit(ip, 'supra-join', 40, 3600000);
+        const body = isRead ? {} : await json(req, splitOrigin, 32 * 1024);
+        const result = supra.handle(
+          path,
+          req.method,
+          body,
+          req.headers['x-participant-token'],
+        );
+        return send(res, result.status, result.body);
       }
       const match = path.match(
         /^\/api\/rooms(?:\/([A-Za-z0-9_-]+)(?:\/(join|choices|vote|spin|reset|lock))?)?$/u,
       );
       if (!match) fail(404, 'That desk does not exist.');
       const [, id, action] = match;
-      const ip =
-        trustProxy && typeof req.headers['x-real-ip'] === 'string'
-          ? req.headers['x-real-ip']
-          : req.socket.remoteAddress || 'unknown';
       limit(ip, 'read', 600, 60000);
       if (id && !action && req.method === 'GET')
         return send(res, 200, {

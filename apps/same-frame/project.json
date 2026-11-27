@@ -1,0 +1,30 @@
+{
+  "name": "same-frame",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/same-frame/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/same-frame"
+      ],
+      "options": {
+        "command": "node_modules/.bin/vite build --config apps/same-frame/vite.config.ts"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "node_modules/.bin/vite --config apps/same-frame/vite.config.ts --host 127.0.0.1 --port 4212"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test apps/same-frame/tests/*.test.mjs"
+      }
+    }
+  }
+}

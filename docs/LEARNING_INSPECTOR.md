@@ -16,6 +16,10 @@ In the Signals preview, click **Add one**, then use **Previous frame** or the sl
 
 The slider holds the displayed history window while the live preview continues running. **Follow live** jumps to the newest observation. The lab retains 60 frames in memory per window and shows up to 20 DOM changes per frame. Starting a new run clears previous history. Editing the source disables links from a previous run until its source matches again.
 
+## Comparing row identity
+
+Open **Compare row identity**, edit the draft on **Build**, and predict which list will keep each input with its original task. Drag Build onto Sketch, or move it to the first position with the controls. The result follows the same input objects across the render and shows their old and new task names. Change the first loop to `track task.id`, then run the challenge to verify that both lists preserve every draft.
+
 ## Release and verification
 
 The Learning Lab workflow builds the UI and compiler, runs the unit tests and a Chromium test with real AOT output, then packages both for the Angular host. After activation it checks the public desktop and mobile flows, all lessons, guest saves, and sharing. A failed smoke test or public browser check restores the preceding Lab release.
