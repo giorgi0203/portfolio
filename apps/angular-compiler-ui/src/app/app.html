@@ -29,6 +29,8 @@
       </div>
       @if(previewError()){<div class="error-card" role="alert"><strong>Something to investigate</strong><pre>{{previewError()}}</pre><p>Check the component name, template syntax, and imports. The preview supports Angular core, common, forms, platform-browser, and rxjs.</p></div>}
       <div class="preview-footer"><span>Isolated browser preview · {{inspectionBlocks().length}} mapped blocks</span><button class="text-button" (click)="stopPreview()">Stop preview</button></div>
+      <app-render-replay [frames]="activities()" [runId]="runId" [blocks]="inspectionBlocks()"
+        [stale]="previewStale()" (inspectSource)="openReplaySource($event)" />
       <section class="inspection-card" aria-label="Selected preview block" aria-live="polite">
         <div class="section-heading"><h3>Inspect this block</h3>@if(inspection()?.pinned){<button class="text-button" (click)="unpinInspection()">Unpin selection</button>}</div>
         @if(inspection();as selected){
@@ -53,7 +55,7 @@
         @if(inspectionTruncated()){<p class="subtle">The first 300 template blocks are available for inspection.</p>}
       </section>
       <section class="state-panel" aria-label="Live reactivity"><div class="section-heading"><h3>Follow the state</h3><small>{{batches()}} DOM update batches</small></div><p class="subtle">Interact with the preview. Signal and property values update here.</p>@if(stateEntries().length){<div class="state-values">@for(entry of stateEntries();track entry[0]){<div><code>{{entry[0]}}</code><pre>{{entry[1]}}</pre></div>}</div>}@else{<p class="empty-state">Run a component to inspect its state.</p>}@if(changes().length){<div class="change-list">@for(change of changes();track change.name){<p><code>{{change.name}}</code><span>{{change.before}} <b>→</b> {{change.after}}</span></p>}</div>}</section>
-      <section class="activity-panel" aria-label="Angular activity"><div class="section-heading"><h3>Last observed activity</h3><small>Last {{activities().length}} observations</small></div><p class="subtle">Browser events, Angular render passes, and changes observed in the DOM.</p>@if(lastActivity();as activity){<p class="current-activity"><strong>{{activity.phase}}</strong>@if(activity.handler){<code>{{activity.handler}}</code>}</p>}<ol class="activity-list">@for(activity of activities();track $index){<li [class.event-activity]="activity.kind==='event'"><span>{{activity.kind==='event'?'EVENT':'RENDER'}}</span><div><strong>{{activity.phase}}</strong>@if(activity.eventName){<small>{{activity.eventName}}</small>}@if(activity.handler){<code>{{activity.handler}}</code>}@for(change of activity.changes;track $index){<small>{{change.name}}: {{change.before}} → {{change.after}}</small>}@if(activity.blockId && !previewStale()){<button type="button" class="source-link" (click)="inspectActivity(activity)">Inspect this block</button>}</div></li>}@empty{<li class="activity-empty">Click a button or edit an input in the preview.</li>}</ol></section>
+
     </section>
     <section class="compiler-pane pane" tabindex="-1" [class.mobile-hidden]="mobileTab()!=='compiler'" aria-label="Compiler workspace">
       <app-compiler-explorer [result]="compilationResult()" [isCompiling]="isCompiling()" [source]="componentTs()" [compiledSource]="compiledSource()" [selectedSource]="sourceRange()" [serverStatus]="serverStatus()" [previewBlocks]="previewStale()?[]:inspectionBlocks()"
@@ -70,5 +72,5 @@
   </aside>
   @if(message()){<div class="status-message" role="status">{{message()}}</div>}
   @if(shareLink()){<div class="share-box"><label for="share-link">Portable experiment link</label><input id="share-link" readonly [value]="shareLink()" (focus)="$any($event.target).select()" /><small>The code is stored in this URL fragment. Opening the link does not publish it to a server.</small></div>}
-  <footer class="site-footer"><span>Made for curious humans, by <a href="https://giorgi.app/">Giorgi</a>.</span><span>Angular 21 · Seven lessons · Live preview + real AOT compiler</span></footer>
+  <footer class="site-footer"><span>Made for curious humans, by <a href="https://giorgi.app/">Giorgi</a>.</span><span>Angular 21 · {{lessons.length}} lessons · Live preview + real AOT compiler</span></footer>
 </div>

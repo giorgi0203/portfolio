@@ -1,7 +1,7 @@
 name: Deploy Angular Learning Lab
 on:
   push:
-    branches: [codex/angular-connected-inspector, main]
+    branches: [codex/angular-connected-inspector, codex/five-playground-updates, main]
     paths:
       - 'apps/angular-compiler-ui/**'
       - 'apps/angular-compiler-api/**'

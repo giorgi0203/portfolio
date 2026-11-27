@@ -40,13 +40,21 @@ export interface InspectionChange {
   before: string;
   after: string;
 }
+export interface RecordedDomChange extends InspectionChange {
+  tag: string;
+  blockId: string | null;
+}
+
 export interface InspectionActivity {
   id: number;
-  kind: 'event' | 'render';
+  kind: 'initial' | 'event' | 'render' | 'state';
   phase: string;
   at: number;
   blockId: string | null;
   eventName: string;
   handler: string;
   changes: InspectionChange[];
+  state: Record<string, string>;
+  domChanges: RecordedDomChange[];
+  domChangeCount: number;
 }

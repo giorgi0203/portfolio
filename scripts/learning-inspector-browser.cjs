@@ -107,7 +107,7 @@ async function localHarness() {
     await page.waitForFunction(() => { const selection = [...window.__labInspectionPackets].reverse().find(packet => packet.type === 'learning:inspect')?.selection; return selection?.pinned && selection.values.count === '1' && selection.values.doubled === '2'; });
     await preview().locator('h2').hover();
     assert.equal((await currentSelection()).blockId, increment.id, 'Hover must not replace a pinned selection');
-    await page.getByRole('region', { name: 'Angular activity', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Render Replay', exact: true }).waitFor();
     await page.waitForFunction(() => window.__labInspectionPackets.some(packet => packet.type === 'learning:activity' && packet.activity?.kind === 'event' && packet.activity?.eventName === 'click' && packet.activity?.handler.includes('count.update')));
     await page.waitForFunction(() => window.__labInspectionPackets.some(packet => packet.type === 'learning:activity' && packet.activity?.kind === 'render'));
     await page.getByRole('button', { name: 'Unpin selection', exact: true }).click();
@@ -197,6 +197,37 @@ async function localHarness() {
     await page.getByRole('button', { name: 'Raw', exact: true }).click();
     await page.locator('app-compiler-explorer .compiler-comment').first().waitFor({state:'detached'});
     assert.equal(await page.locator('app-compiler-explorer .compiler-comment').count(), 0);
+    // The capture, render, and DOM frames are real observations. Scrubbing must never run a handler.
+    const replay = page.getByRole('region', {name:'Render Replay',exact:true});
+    const frames = await page.evaluate(() => {
+      const packets = window.__labInspectionPackets;
+      const runId = packets.filter(packet => packet.type === 'learning:inspection-map').at(-1).runId;
+      return packets.filter(packet => packet.runId === runId && packet.type === 'learning:activity').map(packet=>packet.activity);
+    });
+    const captureIndex = frames.findIndex(frame => frame.kind === 'event' && frame.eventName === 'click' && frame.state.count === '1');
+    const updateIndex = frames.findIndex(frame => frame.domChanges.some(change => change.before === 'Count: 1' && change.after === 'Count: 2'));
+    assert.ok(captureIndex > 0 && updateIndex > captureIndex);
+    const seek = async index => {
+      const slider = replay.getByRole('slider', {name:'Recorded frame'});
+      await slider.focus(); await slider.press('Home');
+      for(let i=0;i<index;i++) await slider.press('ArrowRight');
+    };
+    await seek(captureIndex);
+    await replay.getByText('Reviewing history', {exact:true}).waitFor();
+    await replay.locator('summary').click();
+    assert.equal(await replay.locator('details .values>div').filter({has:page.locator('dt',{hasText:/^count$/})}).locator('dd').innerText(), '1');
+    await preview().getByText('Count: 2', {exact:true}).waitFor();
+    await preview().locator('#increment').click();
+    await preview().getByText('Count: 3', {exact:true}).waitFor();
+    assert.equal(await replay.locator('.frame-title small').innerText(), 'Frame '+frames[captureIndex].id, 'New live events must not move the historical cursor');
+    await seek(updateIndex);
+    await replay.getByRole('button',{name:'Open template for Count: 1 → Count: 2',exact:true}).click();
+    await explorer.locator('.generated-line.selected').filter({hasText:/ctx\.count\(\)/}).waitFor();
+    await replay.getByRole('button',{name:'Follow live'}).click();
+    await replay.getByText('Following live', {exact:true}).waitFor();
+    assert.equal(await replay.locator('details .values>div').filter({has:page.locator('dt',{hasText:/^count$/})}).locator('dd').innerText(), '3');
+    console.log('PASS real event and render history, immutable scrubbed state and source-linked per-element DOM transitions');
+
     const revised = signals.replace('A tiny signal counter', 'My connected counter').replace(
       '<p>Count: {{ count() }}</p>',
       '<p id="outer">Count: {{ count() }}</p>\n' +

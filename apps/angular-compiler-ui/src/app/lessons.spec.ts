@@ -10,7 +10,8 @@ describe('Angular Learning Lab lessons', () => {
       'forms',
       'communication',
       'change-detection',
-      'rendering'
+      'rendering',
+      'row-tracking'
     ]);
 
     const changeDetection = learningLessons.find(lesson => lesson.id === 'change-detection');

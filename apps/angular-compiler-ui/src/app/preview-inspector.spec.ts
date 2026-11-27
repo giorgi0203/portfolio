@@ -98,6 +98,22 @@ describe('linked preview inspection', () => {
     expect(selection?.lastDomChange).toBeUndefined();
   });
 
+  it('keeps distinct observed text changes for each source block in one render', () => {
+    const [first,second] = rows();
+    second.setAttribute('data-lab-node','other');
+    inspector.reset([block, {...block,id:'other'}]);
+    observer.takeRecords();
+    const firstText=first.firstChild, secondText=second.firstChild;
+    if(!firstText || !secondText)throw new Error('Missing fixture text');
+    firstText.nodeValue='A';
+    secondText.nodeValue='B';
+    inspector.rendered([{name:'count',before:'0',after:'1'}],observer.takeRecords(),true,{count:'1'});
+    expect(activity).toMatchObject({state:{count:'1'},blockId:null,domChangeCount:2,domChanges:[
+      {blockId:block.id,tag:'p',name:'Text',before:'First',after:'A'},
+      {blockId:'other',tag:'p',name:'Text',before:'Second',after:'B'},
+    ]});
+  });
+
   it('waits for the selected source block to render without borrowing another instance’s history', () => {
     mount.replaceChildren();
     inspector.focusBlock(block.id);

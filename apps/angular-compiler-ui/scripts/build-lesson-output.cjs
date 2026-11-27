@@ -1,4 +1,4 @@
-/** Ship real compiler output for the seven public starters, ready before the first interaction. */
+/** Ship real compiler output for the public starters, ready before the first interaction. */
 const fs = require('node:fs');
 const path = require('node:path');
 const esbuild = require('esbuild');

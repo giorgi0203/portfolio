@@ -1,5 +1,5 @@
 import * as core from '@angular/core';
-import type {InspectionActivity, InspectionChange, InspectionSelection} from '../src/app/inspection-types';
+import type {InspectionActivity, InspectionChange, InspectionSelection, RecordedDomChange} from '../src/app/inspection-types';
 import type {MappedBlock} from './source-map';
 
 type Sender=(type:string,data:Record<string,unknown>)=>void;
@@ -80,7 +80,7 @@ export class PreviewInspector {
   private followSource=false;
   private requestedIndex=1;
   private domChanges=new WeakMap<Element,InspectionChange>();
-  constructor(private mount:Element,private send:Sender){
+  constructor(private mount:Element,private send:Sender,private readRootState:()=>Record<string,string>=()=>({})){
     this.overlay=document.createElement('div');this.overlay.setAttribute('data-lab-overlay','');
     this.overlay.style.cssText='display:none;position:fixed;pointer-events:none;z-index:2147483647;outline:2px solid #4e925f;background:rgba(116,172,88,.09);box-shadow:0 0 0 1px white;box-sizing:border-box;border-radius:3px';
     document.body.append(this.overlay);
@@ -133,7 +133,7 @@ export class PreviewInspector {
     const element=this.element(event.target);if(!element||!this.mount.contains(element))return;
     const block=this.blocks.get(element.getAttribute('data-lab-node')||'');
     const handler=block?.bindings.filter(binding=>(binding.kind==='event'||binding.kind==='two-way')&&binding.name===event.type).map(binding=>binding.expression).join('; ').slice(0,500)||'';
-    this.activity('event','Browser event dispatched',[],block?.id??null,event.type,handler);
+    this.activity('event','Browser event dispatched',this.readRootState(),{blockId:block?.id??null,eventName:event.type,handler});
   };
   private key=(event:KeyboardEvent)=>{if(event.key==='Escape')this.unpin();};
   private hide(){this.overlay.style.display='none';}
@@ -177,7 +177,10 @@ export class PreviewInspector {
     this.position();
     this.send('learning:inspect',{selection:this.selection(instances)});
   }
-  rendered(changes:InspectionChange[],records:MutationRecord[],angularRendered=false){
+  initial(state:Record<string,string>){this.activity('initial','Initial component state',state);}
+  rendered(changes:InspectionChange[],records:MutationRecord[],angularRendered=false,state:Record<string,string>={}){
+    const domChanges:RecordedDomChange[]=[];
+    let domChangeCount=0;
     const seen=new Map<Node,Set<string>>();
     const blockIds=new Set<string|null>();
     for(const record of records){
@@ -188,16 +191,24 @@ export class PreviewInspector {
       if(!change)continue;
       this.domChanges.set(element,change);
       const id=element.getAttribute('data-lab-node');
-      blockIds.add(id&&this.blocks.has(id)?id:null);
+      const blockId=id&&this.blocks.has(id)?id:null;
+      blockIds.add(blockId);
+      domChangeCount++;
+      if(domChanges.length<20)domChanges.push({...change,tag:element.localName,blockId});
     }
     this.refresh();
     if(angularRendered||records.length){
       const phase=angularRendered?'Angular render pass completed':'Preview DOM changed';
-      this.activity('render',phase,changes,blockIds.size===1?[...blockIds][0]:null);
+      this.activity('render',phase,state,{changes,domChanges,domChangeCount,blockId:blockIds.size===1?[...blockIds][0]:null});
+    }else if(changes.length){
+      this.activity('state','Component values changed',state,{changes});
     }
   }
-  private activity(kind:InspectionActivity['kind'],phase:string,changes:InspectionActivity['changes'],blockId:string|null,eventName='',handler=''){
-    const activity:InspectionActivity={id:++this.serial,kind,phase,at:Date.now(),blockId,eventName,handler,changes:changes.slice(0,20)};
+  private activity(kind:InspectionActivity['kind'],phase:string,state:Record<string,string>,
+    details:Partial<Pick<InspectionActivity,'blockId'|'handler'|'eventName'|'changes'|'domChanges'|'domChangeCount'>>={}){
+    const activity:InspectionActivity={
+      id:++this.serial,kind,phase,at:Date.now(),state,eventName:'',handler:'',blockId:null,changes:[],domChanges:[],domChangeCount:0,...details,
+    };
     this.send('learning:activity',{activity});
   }
 }

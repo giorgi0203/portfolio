@@ -8,6 +8,7 @@ import { CompilerExplorerComponent } from './components/compiler-explorer/compil
 import type { InspectionActivity, InspectionBlock, InspectionSelection } from './inspection-types';
 import type { SourceEditorRange } from './components/code-editor/code-editor.component';
 import { learningLessons, type LearningLesson } from './lessons';
+import { RenderReplay, replayLimit } from './components/render-replay/render-replay';
 import { WorkspaceTrail, type WorkspacePanel } from './components/workspace-trail/workspace-trail';
 import { owningPreviewBlock } from './workspace-selection';
 import type { CompilerInstruction } from './compiler-explanations';
@@ -17,7 +18,7 @@ interface User {id:string;name:string;email:string;}
 interface CheckResult {label:string;passed:boolean;actual:string;}
 interface Change {name:string;before:string;after:string;}
 const localKey='giorgi-learning-v1';
-@Component({selector:'app-root',standalone:true,imports:[CommonModule,FormsModule,CodeEditorComponent,CompilerExplorerComponent,WorkspaceTrail],templateUrl:'./app.html',styleUrl:'./app.css'})
+@Component({selector:'app-root',standalone:true,imports:[CommonModule,FormsModule,CodeEditorComponent,CompilerExplorerComponent,WorkspaceTrail,RenderReplay],templateUrl:'./app.html',styleUrl:'./app.css'})
 export class App implements OnInit,OnDestroy {
  @ViewChild('previewFrame') previewFrame?:ElementRef<HTMLIFrameElement>;
  private readonly compilerService=inject(CompilerApiService);
@@ -66,10 +67,9 @@ export class App implements OnInit,OnDestroy {
  readonly inspectedBlock=computed(()=>this.inspectionBlocks().find(block=>block.id===this.inspection()?.blockId)||null);
  readonly inspectedValues=computed(()=>Object.entries(this.inspection()?.values||{}));
  readonly inspectedLocals=computed(()=>Object.entries(this.inspection()?.locals||{}));
- readonly lastActivity=computed(()=>this.activities()[0]||null);
  completed=signal<string[]>([]);experiments=signal<Experiment[]>([]);user=signal<User|null>(null);accountLoading=signal(true);saving=signal(false);
  title='My Angular experiment';message=signal('');shareLink=signal('');
- private sharedImported=false;private accountGeneration=0;private readyConsumed=false;private runSource='';private runChecks:LearningLesson['checks']=[];private channel='';private runId=0;private pendingChecks=false;private previewTimer?:ReturnType<typeof setTimeout>;private draftTimer?:ReturnType<typeof setTimeout>;private currentExperimentId='';
+ private sharedImported=false;private accountGeneration=0;private readyConsumed=false;private runSource='';private runChecks:LearningLesson['checks']=[];private channel='';protected runId=0;private pendingChecks=false;private previewTimer?:ReturnType<typeof setTimeout>;private draftTimer?:ReturnType<typeof setTimeout>;private currentExperimentId='';
  readonly stateEntries=computed(()=>Object.entries(this.state()));
  readonly progress=computed(()=>Math.round(this.completed().filter(id=>this.lessons.some(lesson=>lesson.id===id)).length/this.lessons.length*100));
  private readonly onMessage=(event:MessageEvent)=>{
@@ -246,15 +246,29 @@ export class App implements OnInit,OnDestroy {
   this.sourceRange.set(block && !this.previewStale() ? block : null);
  }
  private receiveActivity(value:unknown){
-  if(!value||typeof value!=='object')return;const item=value as InspectionActivity;if(!['event','render'].includes(item.kind)||typeof item.phase!=='string'||typeof item.eventName!=='string'||typeof item.handler!=='string')return;
-  const changes=Array.isArray(item.changes)?item.changes.filter(entry=>entry&&typeof entry.name==='string'&&typeof entry.before==='string'&&typeof entry.after==='string').slice(0,15).map(entry=>({name:entry.name.slice(0,80),before:entry.before.slice(0,300),after:entry.after.slice(0,300)})):[];
-  const activity:InspectionActivity={id:Number.isFinite(item.id)?item.id:Date.now(),kind:item.kind,phase:item.phase.slice(0,150),at:Number.isFinite(item.at)?item.at:Date.now(),blockId:typeof item.blockId==='string'?item.blockId.slice(0,100):null,eventName:item.eventName.slice(0,80),handler:item.handler.slice(0,350),changes};
-  this.activities.update(items=>[activity,...items].slice(0,18));
+  if (!value || typeof value!=='object') return;
+  const item = value as InspectionActivity;
+  if (!['initial','event','render','state'].includes(item.kind) || !Number.isSafeInteger(item.id) ||
+      typeof item.phase!=='string' || typeof item.eventName!=='string' || typeof item.handler!=='string') return;
+  const changes = (Array.isArray(item.changes) ? item.changes : []).slice(0,20).flatMap(entry =>
+    entry && typeof entry.name==='string' && typeof entry.before==='string' && typeof entry.after==='string'
+      ? [{name:entry.name.slice(0,80),before:entry.before.slice(0,500),after:entry.after.slice(0,500)}] : []);
+  const domChanges = (Array.isArray(item.domChanges) ? item.domChanges : []).slice(0,20).flatMap(entry =>
+    entry && typeof entry.name==='string' && typeof entry.before==='string' &&
+    typeof entry.after==='string' && typeof entry.tag==='string'
+      ? [{name:entry.name.slice(0,80),before:entry.before.slice(0,400),after:entry.after.slice(0,400),
+          tag:entry.tag.slice(0,80),blockId:typeof entry.blockId==='string'?entry.blockId.slice(0,100):null}] : []);
+  const activity:InspectionActivity = {
+   id:item.id,kind:item.kind,phase:item.phase.slice(0,150),at:Number.isFinite(item.at)?item.at:Date.now(),
+   blockId:typeof item.blockId==='string'?item.blockId.slice(0,100):null,
+   eventName:item.eventName.slice(0,80),handler:item.handler.slice(0,350),state:this.values(item.state),
+   changes,domChanges,domChangeCount:Number.isSafeInteger(item.domChangeCount) && item.domChangeCount>=domChanges.length
+     ? item.domChangeCount : domChanges.length,
+  };
+  this.activities.update(frames=>[...frames.slice(1-replayLimit),activity]);
  }
- inspectActivity(activity:InspectionActivity) {
-  if (this.previewStale()) return;
-  const block = this.inspectionBlocks().find(entry=>entry.id===activity.blockId);
-  if (block) this.focusSource(block);
+ openReplaySource(block:InspectionBlock) {
+  if (!this.previewStale() && this.inspectionBlocks().includes(block)) this.focusSource(block,true);
  }
  private markComplete(){const generation=this.accountGeneration;const id=this.lesson().id;if(!this.completed().includes(id))this.completed.update(ids=>[...ids,id]);this.persist();if(this.user())void this.request('/api/learning/progress',{method:'PUT',body:JSON.stringify({completedLessonIds:this.completed()})}).catch(()=>{if(generation===this.accountGeneration)this.message.set('Completed in this tab; cloud sync failed. Run checks again when online to retry.');});}
  private restoreGuest(){
