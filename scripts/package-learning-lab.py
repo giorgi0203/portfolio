@@ -1,14 +1,25 @@
-"""Package the tested browser-only Learning Lab update, excluding account data."""
+"""Package only the Angular Learning Lab's tested browser and compiler builds."""
+import argparse
+import tarfile
 from pathlib import Path
-import tempfile,subprocess,shutil,json,hashlib
-repo=Path(__file__).resolve().parents[1]
-source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
-archive=Path('/tmp/giorgi-learning-lab.tar.gz')
-with tempfile.TemporaryDirectory(prefix='giorgi-learning-package-') as directory:
- stage=Path(directory)
- shutil.copytree(repo/'dist/apps/angular-compiler-ui/browser',stage/'browser',symlinks=True)
- assert (stage/'browser/preview/runtime.js').is_file()
- (stage/'deploy').mkdir();shutil.copy2(repo/'deploy/install-learning-lab.sh',stage/'deploy/install-learning-lab.sh')
- subprocess.run(['tar','-czf',str(archive),'-C',str(stage),'browser','deploy'],check=True)
-meta={'source':source,'path':str(archive),'checksum':hashlib.sha256(archive.read_bytes()).hexdigest()}
-Path('/tmp/giorgi-learning-lab-meta.json').write_text(json.dumps(meta));print(json.dumps(meta))
+
+repo = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument("archive", type=Path)
+args = parser.parse_args()
+
+browser = repo / "dist/apps/angular-compiler-ui/browser"
+compiler = repo / "dist/apps/angular-compiler-api"
+libraries = repo / "deploy/compiler-runtime/node_modules"
+for required in (browser / "index.html", browser / "preview/runtime.js",
+                 compiler / "main.js", compiler / "compiler/worker.js",
+                 libraries / "@angular/compiler-cli/package.json"):
+    if not required.is_file():
+        raise SystemExit(f"Missing build output: {required}")
+
+with tarfile.open(args.archive, "w:gz", compresslevel=3) as bundle:
+    bundle.add(browser, arcname="browser")
+    bundle.add(compiler / "main.js", arcname="compiler/main.js")
+    bundle.add(compiler / "compiler/worker.js", arcname="compiler/compiler/worker.js")
+    bundle.add(libraries, arcname="compiler/node_modules")
+    bundle.add(repo / "deploy/install-learning-lab.sh", arcname="install-learning-lab.sh")

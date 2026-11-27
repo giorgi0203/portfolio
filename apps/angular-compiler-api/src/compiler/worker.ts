@@ -173,7 +173,7 @@ async function compile(projectDir: string): Promise<WorkerResult> {
     // Collect emitted JS files
     for (const [filePath, content] of emittedFiles) {
       if (filePath.endsWith('.js') && !filePath.includes('node_modules')) {
-        files.push({ path: filePath, content });
+        files.push(compiledFile(projectDir, filePath, content, emittedFiles.get(filePath + '.map')));
       }
     }
 
@@ -197,6 +197,22 @@ async function compile(projectDir: string): Promise<WorkerResult> {
   }
 }
 
+function compiledFile(projectDir: string, filePath: string, content: string, mapJson?: string): CompiledFile {
+  // The API returns mappings separately and has no public .map download route.
+  const file: CompiledFile = {
+    path: filePath,
+    content: mapJson ? content.replace(/\n\/\/# sourceMappingURL=[^\r\n]+(?:\r?\n)?$/, '\n') : content,
+  };
+  if (!mapJson || mapJson.length > 1024 * 1024) return file;
+  const map = JSON.parse(mapJson);
+  if (map.version !== 3 || !Array.isArray(map.sources) || typeof map.mappings !== 'string') return file;
+  const componentPath = path.join(projectDir, 'src', 'app', 'demo.component.ts');
+  const mapDir = path.resolve(projectDir, path.dirname(filePath), map.sourceRoot || '');
+  const sourceIndex = map.sources.findIndex((source: string) => path.resolve(mapDir, source) === componentPath);
+  if (sourceIndex >= 0) file.templateMap = { sourceIndex, mappings: map.mappings };
+  return file;
+}
+
 function collectJsFiles(
   dir: string,
   baseDir: string,
@@ -210,7 +226,8 @@ function collectJsFiles(
     } else if (entry.isFile() && entry.name.endsWith('.js')) {
       const relativePath = path.relative(baseDir, fullPath);
       const content = fs.readFileSync(fullPath, 'utf-8');
-      files.push({ path: relativePath, content });
+      const mapPath = fullPath + '.map';
+      files.push(compiledFile(baseDir, relativePath, content, fs.existsSync(mapPath) ? fs.readFileSync(mapPath, 'utf8') : undefined));
     }
   }
 }

@@ -1,34 +1,186 @@
 <section class="compiler-workbench" aria-label="Angular compiler explorer" [attr.aria-busy]="isCompiling()">
   <header class="compiler-heading">
-    <div><p class="eyebrow">THE COMPILER, OPENED UP</p><h2>From template to instructions</h2><p>Real AOT output, with explanations you can explore.</p></div>
-    <div class="compiler-actions"><span class="compiler-status" [class.online]="serverStatus()==='online'">Compiler {{serverStatus()}}</span><button class="compile-button" type="button" (click)="compileRequested.emit()" [disabled]="isCompiling()||serverStatus()!=='online'">{{isCompiling()?'Compiling…':'Compile AOT'}}</button>@if(serverStatus()==='offline'){<button type="button" class="subtle-button" (click)="retryRequested.emit()">Retry compiler</button>}</div>
+    <div>
+      <h2>From template to instructions</h2>
+      <p>Select a generated call to inspect its arguments and find the corresponding template.</p>
+    </div>
+    <div class="compiler-actions">
+      <span class="compiler-status" [class.online]="serverStatus()==='online'">Compiler {{serverStatus()}}</span>
+      <button class="compile-button" type="button" (click)="compileRequested.emit()" [disabled]="isCompiling() || serverStatus()!=='online'">
+        {{isCompiling() ? 'Compiling…' : 'Compile AOT'}}
+      </button>
+      @if(serverStatus()==='offline'){
+        <button type="button" class="subtle-button" (click)="retryRequested.emit()">Retry compiler</button>
+      }
+    </div>
   </header>
-  @if(isCompiling()){<div class="compiler-notice" role="status"><span class="busy-dot"></span> Angular is compiling this source. The preview runs separately in your browser.</div>}
-  @if(stale()){<div class="compiler-notice stale-output" role="status">Source changed. This output belongs to the last compilation. Compile again to reconnect source highlighting.</div>}
-  @if(!result()&&!isCompiling()){
-    <div class="empty-compiler"><span class="empty-glyph" aria-hidden="true">{{ '{ }' }}</span><h3>See the instructions behind your component.</h3><p>Compile the current code, then select a generated instruction. Read what it creates, updates, or connects, and jump to a related source block when one can be identified.</p><div class="compiler-stages"><span><b>1</b> Your component + template</span><span aria-hidden="true">→</span><span><b>2</b> Angular AOT compiler</span><span aria-hidden="true">→</span><span><b>3</b> Generated JavaScript</span></div><p class="compiler-footnote">This panel displays actual compiler results. It does not simulate instruction-by-instruction execution.</p></div>
+  @if(isCompiling()){
+    <div class="compiler-notice" role="status">Angular is compiling this source.</div>
   }
-  @if(result();as outcome){
-    @if(!outcome.success){<div class="compiler-error" role="alert"><h3>The compiler found something to fix.</h3><ul>@for(diagnostic of outcome.diagnostics;track $index){<li><strong>{{diagnostic.category}}</strong> @if(diagnostic.file){<code>{{diagnostic.file}}{{diagnostic.line?':'+diagnostic.line:''}}{{diagnostic.col?':'+diagnostic.col:''}}</code>}<span>{{diagnostic.message}}</span></li>}</ul><p>The running preview and this AOT check are separate. A successful preview does not hide compiler errors.</p></div>}
-    @else {
-      <div class="compiler-toolbar"><div class="file-tabs" role="group" aria-label="Generated files">@for(entry of files();track entry.path){<button type="button" [class.active]="file()?.path===entry.path" (click)="filePath.set(entry.path)" [attr.aria-pressed]="file()?.path===entry.path">{{entry.path}}</button>}</div><div class="view-tabs" role="group" aria-label="Generated code display"><button type="button" [class.active]="view()==='annotated'" [attr.aria-pressed]="view()==='annotated'" (click)="view.set('annotated')">Annotated</button><button type="button" [class.active]="view()==='raw'" [attr.aria-pressed]="view()==='raw'" (click)="view.set('raw')">Raw</button></div></div>
-      <div class="explorer-layout">
-        <div class="code-section"><div class="code-heading"><span>{{view()==='annotated'?'Reading notes are added above the real emitted lines.':'Exact emitted JavaScript, unchanged.'}}</span><div><button type="button" (click)="copy()">{{copied()?'Copied':'Copy raw'}}</button><button type="button" (click)="download()">Download raw</button></div></div><div class="generated-code" tabindex="0" aria-label="Generated JavaScript">
-          @for(line of lines();track line.number){
-            @if(view()==='annotated'){@for(instruction of line.instructions;track instruction.id){<div class="compiler-comment"><span aria-hidden="true"></span><code>// {{instruction.comment}}</code></div>}}
-            @let isSelected = isSelectedLine(line.number);
-            <button type="button" class="generated-line" [attr.data-line]="line.number" [class.selected]="isSelected" [class.has-instruction]="line.instructions.length" [disabled]="!line.instructions.length" (click)="selectLine(line.number)" [attr.aria-pressed]="isSelected" [attr.aria-label]="'Generated line '+line.number+(line.instructions[0]?' '+line.instructions[0].name:'')"><span class="line-number" aria-hidden="true">{{line.number}}</span><code>{{line.content||' '}}</code></button>
+  @if(stale()){
+    <div class="compiler-notice stale-output" role="status">Source changed since the last compilation. Compile again to reconnect the editor and preview.</div>
+  }
+  @if(!result() && !isCompiling()){
+    <div class="empty-compiler">
+      <h3>See what Angular generates</h3>
+      <p>Choose <strong>Compile AOT</strong> to turn the current template into JavaScript. Then hover a preview element or select a call to follow the connection.</p>
+    </div>
+  }
+  @if(result(); as outcome){
+    @if(!outcome.success){
+      <div class="compiler-error" role="alert">
+        <h3>The compiler found something to fix</h3>
+        <ul>@for(diagnostic of outcome.diagnostics; track $index){
+          <li><strong>{{diagnostic.category}}</strong>
+            @if(diagnostic.file){ <code>{{diagnostic.file}}{{diagnostic.line ? ':' + diagnostic.line : ''}}{{diagnostic.col ? ':' + diagnostic.col : ''}}</code> }
+            {{diagnostic.message}}
+          </li>
+        }</ul>
+      </div>
+    } @else {
+      <div class="compiler-toolbar">
+        <div class="file-tabs" role="group" aria-label="Generated files">
+          @for(entry of files(); track entry.path){
+            <button type="button" [class.active]="file()?.path===entry.path" (click)="selectFile(entry.path)" [attr.aria-pressed]="file()?.path===entry.path">{{entry.path}}</button>
           }
-        </div>@if(visibleLineLimit()){<p class="compiler-footnote">Showing the first 1,800 lines. Copy and download keep the complete compiler output.</p>}</div>
+        </div>
+        <div class="view-tabs" role="group" aria-label="Generated code display">
+          <button type="button" [class.active]="view()==='annotated'" [attr.aria-pressed]="view()==='annotated'" (click)="view.set('annotated')">Annotated</button>
+          <button type="button" [class.active]="view()==='raw'" [attr.aria-pressed]="view()==='raw'" (click)="view.set('raw')">Raw</button>
+        </div>
+      </div>
+      <div class="explorer-layout">
+        <div class="code-section">
+          <div class="code-heading">
+            <span>{{view()==='annotated' ? 'Generated JavaScript with reading notes' : 'Original generated JavaScript'}}</span>
+            <div><button type="button" (click)="copy()">{{copied() ? 'Copied' : 'Copy raw'}}</button><button type="button" (click)="download()">Download raw</button></div>
+          </div>
+          <div class="generated-code" tabindex="0" aria-label="Generated JavaScript">
+            @for(line of lines(); track line.number){
+              @if(view()==='annotated'){
+                @for(instruction of line.instructions; track instruction.id){
+                  <div class="compiler-comment"><span aria-hidden="true"></span><code>// {{instruction.comment}}</code></div>
+                }
+              }
+              @let isSelected = selected()?.line === line.number;
+              <button type="button" class="generated-line" [attr.data-line]="line.number" [class.selected]="isSelected"
+                [class.has-instruction]="line.instructions.length" [disabled]="!line.instructions.length" (click)="selectLine(line.number)"
+                [attr.aria-pressed]="isSelected" [attr.aria-label]="'Generated line '+line.number+(line.instructions[0]?' '+line.instructions[0].name:'')">
+                <span class="line-number" aria-hidden="true">{{line.number}}</span><code>{{line.content || ' '}}</code>
+              </button>
+            }
+          </div>
+          @if(visibleLineLimit()){<p class="compiler-footnote">Showing the first 1,800 lines. Copy and download include the complete file.</p>}
+        </div>
         <aside class="explanation-section" aria-label="Instruction explanations">
-          <div class="phase-filters" role="group" aria-label="Filter compiler instructions">@for(item of phases;track item.id){<button type="button" [class.active]="phase()===item.id" [attr.aria-pressed]="phase()===item.id" (click)="selectPhase(item.id)">{{item.label}}</button>}</div>
-          <div class="instruction-list" role="group" aria-label="Generated instructions">@for(instruction of filtered();track instruction.id){<button type="button" [attr.data-instruction]="instruction.name" [class.active]="selected()?.id===instruction.id" [attr.aria-pressed]="selected()?.id===instruction.id" (click)="select(instruction)"><span>L{{instruction.line}}</span><code>{{instruction.name}}</code><small>{{instruction.phase}}</small></button>}@if(!filtered().length){<p class="compiler-footnote">No instructions in this category for the selected file.</p>}</div>
-          @if(selected();as instruction){<section class="instruction-explanation" aria-live="polite"><p class="phase-label">{{phaseLabel(instruction.phase)}}</p><h3>{{instruction.title}}</h3><p>{{instruction.explanation}}</p><pre><code>{{instruction.raw.slice(0,2800)}}{{instruction.raw.length>2800?'\n… select a generated line to explore a smaller instruction.':''}}</code></pre>@if(instruction.bindings.length){<p class="binding-label">Component fields referenced here</p><div class="binding-tags">@for(binding of instruction.bindings;track binding){<code>{{binding}}</code>}</div><p class="compiler-footnote">Current values appear in the preview inspector; the compiler output itself is a static result.</p>}
-            @if(instruction.sourceMatch;as match){<div class="source-match"><strong>Approximate source match</strong><p>{{match.reason}}</p><p>Source lines {{match.startLine}}–{{match.endLine}}. Matching names and tags is a guide, not a compiler source map.</p><button type="button" (click)="showSource()" [disabled]="stale()">Show related source</button></div>}@else{<p class="unmapped-note">No reliable source match for this helper. Read the surrounding generated function; this view will not guess a source location.</p>}
-          </section>}@else{<div class="instruction-explanation"><h3>Ordinary emitted JavaScript</h3><p>This file does not contain Angular rendering instructions recognized by the explorer. The raw code is still the real compiler output.</p></div>}
+          @if(selected(); as instruction){
+            <section class="instruction-explanation">
+              <p class="phase-label">{{phaseLabel(instruction.phase)}} <span>· L{{instruction.line}}</span></p>
+              <h3>{{instruction.title}}</h3>
+              <pre class="call-snippet"><code>{{instruction.raw.slice(0,600)}}{{instruction.raw.length > 600 ? '…' : ''}}</code></pre>
+              <p>{{instruction.explanation}}</p>
+              @if(sameLine().length > 1){
+                <div class="call-choices" role="group" [attr.aria-label]="'Calls on line '+instruction.line">
+                  <strong>Calls on this line</strong>
+                  @for(other of sameLine(); track other.id){
+                    <button type="button" [class.active]="other.id===instruction.id" [attr.aria-pressed]="other.id===instruction.id" (click)="select(other)">
+                      {{other.name}} <small>{{ $index + 1 }}</small>
+                    </button>
+                  }
+                </div>
+              }
+              @if(instruction.sourceMatch; as match){
+                <div class="source-match">
+                  <div class="detail-heading"><h4>Template</h4><small>{{match.approximate ? 'Approximate source match' : 'Compiler source map'}} · L{{match.startLine}}{{match.endLine > match.startLine ? '–'+match.endLine : ''}}</small></div>
+                  <pre class="source-snippet"><code>{{snippet()}}</code></pre>
+                  @if(match.approximate){<p>{{match.reason}}</p>}
+                  <button type="button" (click)="showSource()" [disabled]="stale()">Show related source</button>
+                </div>
+              } @else {
+                <p class="unmapped-note">This call has no mapped template location in this file.</p>
+              }
+              @if(observed(); as live){
+                <div class="observed-preview">
+                  <div class="detail-heading"><h4>Observed in preview</h4>
+                    <small>&lt;{{live.selection.tag}}&gt; @if((live.selection.instanceCount || 0) > 1){ · {{live.selection.instanceIndex}} of {{live.selection.instanceCount}} }</small>
+                  </div>
+                  @if(live.selection.instanceCount !== 0){
+                    @if(live.selection.text){<p class="observed-text">{{live.selection.text}}</p>}
+                    @for(field of live.fields; track field[0]){<p class="value-row"><code>{{field[0]}}</code><samp>{{field[1]}}</samp></p>}
+                    @for(local of live.locals; track local[0]){<p class="value-row"><code>{{local[0]}} <small>(local)</small></code><samp>{{local[1]}}</samp></p>}
+                    @if(live.selection.lastDomChange; as change){
+                      <div class="dom-change"><strong>Last DOM change · {{change.name}}</strong>
+                        <p><samp>{{change.before || '(empty)'}}</samp> → <samp>{{change.after || '(empty)'}}</samp></p>
+                      </div>
+                    }
+                  }
+                  @if(live.selection.reason){<p class="compiler-footnote">{{live.selection.reason}}</p>}
+                </div>
+              }
+              @if(decoded(); as details){
+                @if(details.arguments.length){
+                  <h4>Arguments</h4>
+                  <dl class="argument-list">
+                    @for(argument of details.arguments; track $index){
+                      <div><dt><code>{{argument.value}}</code> <span>{{argument.label}}</span></dt><dd>{{argument.detail}}</dd></div>
+                    }
+                  </dl>
+                }
+                @if(details.steps.length){
+                  <h4>Inside Angular <small>· implementation walkthrough</small></h4>
+                  <ol class="runtime-steps">@for(step of details.steps; track $index){<li>{{step}}</li>}</ol>
+                }
+                @if(details.sourceUrl){
+                  <a class="angular-source" [href]="details.sourceUrl" target="_blank" rel="noopener noreferrer">Read the Angular {{details.sourceVersion}} implementation ↗</a>
+                }
+              }
+              <details class="terms">
+                <summary>Read the generated notation</summary>
+                <dl>
+                  <dt>ɵɵ</dt><dd>Angular uses this prefix for internal functions called by generated code.</dd>
+                  <dt>rf</dt><dd>Render flags. The template checks bit 1 to create a view and bit 2 to update bindings. A view can do both during its first render.</dd>
+                  <dt>ctx</dt><dd>The current template context. It can be a component instance or the context of an embedded view, such as a list row.</dd>
+                  <dt>TView</dt><dd>Information shared by every instance of this template.</dd>
+                  <dt>LView</dt><dd>One live instance, including its nodes, context and previously checked binding values.</dd>
+                </dl>
+              </details>
+              @if(related().length > 1){
+                <div class="call-choices" role="group" aria-label="Related calls for this element">
+                  <strong>Calls for this element</strong>
+                  @for(other of related(); track other.id){
+                    <button type="button" [class.active]="other.id===instruction.id" [attr.aria-pressed]="other.id===instruction.id" (click)="select(other)">
+                      {{other.name}} <small>L{{other.line}}</small>
+                    </button>
+                  }
+                </div>
+              }
+            </section>
+          } @else {
+            <div class="instruction-explanation"><p>{{unmappedSelection() ? 'No instruction in this file maps to the selected source. Select a generated call to explore it.' : 'No recognized instructions in this view. Choose another phase or read the generated JavaScript.'}}</p></div>
+          }
+          <div class="instruction-browser">
+            <h4>Browse instructions</h4>
+            <div class="phase-filters" role="group" aria-label="Filter compiler instructions">
+              @for(item of phases; track item.id){
+                <button type="button" [class.active]="phase()===item.id" [attr.aria-pressed]="phase()===item.id" (click)="selectPhase(item.id)">{{item.label}}</button>
+              }
+            </div>
+            <div class="instruction-list" role="group" aria-label="Generated instructions">
+              @for(instruction of filtered(); track instruction.id){
+                <button type="button" [attr.data-instruction]="instruction.name" [class.active]="selected()?.id===instruction.id" [attr.aria-pressed]="selected()?.id===instruction.id" (click)="select(instruction)">
+                  <span>L{{instruction.line}}</span><code>{{instruction.name}}</code><small>{{instruction.phase}}</small>
+                </button>
+              } @empty { <p class="compiler-footnote">No instructions in this category.</p> }
+            </div>
+          </div>
         </aside>
       </div>
-      @if(outcome.diagnostics.length){<details class="compiler-diagnostics"><summary>{{outcome.diagnostics.length}} compiler notes</summary><ul>@for(diagnostic of outcome.diagnostics;track $index){<li>{{diagnostic.message}}</li>}</ul></details>}
+      @if(outcome.diagnostics.length){
+        <details class="compiler-diagnostics">
+          <summary>{{outcome.diagnostics.length}} compiler notes</summary>
+          <ul>@for(diagnostic of outcome.diagnostics; track $index){<li>{{diagnostic.message}}</li>}</ul>
+        </details>
+      }
     }
   }
 </section>

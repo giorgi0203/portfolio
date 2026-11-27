@@ -1,50 +1,105 @@
 #!/usr/bin/env bash
 set -euo pipefail
-stage=${1:?disk staging directory required}; source_id=${2:?source SHA required}
-[[ $source_id =~ ^[a-f0-9]{40}$ && $stage =~ ^/var/tmp/giorgi-learning-[a-f0-9]{40}$ ]]
-ip -4 -o addr show | grep '138.68.64.163/' >/dev/null
-[[ -s $stage/browser/index.html && -s $stage/browser/preview/runtime.js ]]
+
+operation=${1:?install or rollback required}
+release_id=${2:?commit and workflow run required}
+[[ $release_id =~ ^[a-f0-9]{40}-[0-9]+-[0-9]+$ ]]
+ip -4 -o addr show | grep -F '138.68.64.163/' >/dev/null
+
 base=/var/www/giorgi-learning-lab
-release=$base/releases/$source_id-$(date -u +%Y%m%dT%H%M%S)-$$
-backup=/var/backups/giorgi-learning-lab/$(date -u +%Y%m%dT%H%M%S)-$$
-site=/etc/nginx/sites-available/giorgi-angular-compiler
-[[ -f $site && -L /etc/nginx/sites-enabled/giorgi-angular-compiler ]]
-install -d -m 755 "$release"
-install -d -m 700 "$backup"
-cp -p "$site" "$backup/nginx.conf"
-previous=$(readlink "$base/current" || true)
-restore(){
- cp -p "$backup/nginx.conf" "$site"
- if [[ -n $previous ]];then ln -sfn "$previous" "$base/current";else rm -f "$base/current";fi
- nginx -t && systemctl reload nginx
+release=$base/releases/$release_id
+backup=/var/backups/giorgi-learning-lab/$release_id
+service=giorgi-compiler.service
+dropin=/etc/systemd/system/$service.d/90-learning-lab-release.conf
+site=/etc/nginx/sites-enabled/giorgi-angular-compiler
+lab=https://angular-compiler.giorgi.app
+local_https=(--resolve angular-compiler.giorgi.app:443:127.0.0.1)
+# Only release to the independent Lab, preserving Nginx, TLS, auth and the unit's sandbox.
+[[ -L $site && -L $base/current ]]
+grep -Eq 'root[[:space:]]+/var/www/giorgi-learning-lab/current;' "$site"
+[[ $(systemctl show -p User --value "$service") == giorgi-compiler ]]
+[[ -d /var/lib/giorgi-compiler/tmp ]]
+
+switch_browser() {
+  ln -sfnT "$1" "$base/current.$release_id.next"
+  mv -Tf "$base/current.$release_id.next" "$base/current"
 }
-finish(){ result=$?;trap - EXIT;if ((result!=0));then restore || true;fi;rm -rf -- "$stage";exit "$result"; }
-trap finish EXIT
-cp -a "$stage/browser/." "$release/";chmod -R a+rX "$release"
-python3 - "$site" "$stage/site.next" <<'PY'
-from pathlib import Path
-import re,sys
-source=Path(sys.argv[1]).read_text()
-updated,count=re.subn(r'\broot\s+(?:/var/www/giorgi-products/current/lab|/var/www/giorgi-learning-lab/current)\s*;',r'root /var/www/giorgi-learning-lab/current;',source)
-if count!=1:raise SystemExit('The inspected compiler static root did not match exactly once')
-# Preserve every API route and the existing ACME/TLS certificate configuration.
-if 'location = /preview/runtime.js' not in updated:
- updated=updated.replace('client_max_body_size 220k;', 'client_max_body_size 220k;\nlocation = /preview/runtime.js {add_header Cache-Control no-cache always; add_header X-Content-Type-Options nosniff always; try_files $uri =404;}')
-Path(sys.argv[2]).write_text(updated)
+
+wait_compiler() {
+  local attempt
+  for attempt in {1..20}; do
+    if curl -fsS --max-time 2 http://127.0.0.1:3301/health >/dev/null 2>&1; then return 0; fi
+    sleep 1
+  done
+  return 1
+}
+
+restore() {
+  switch_browser "$(cat "$backup/browser")"
+  if [[ -f $backup/compiler.conf ]]; then
+    install -m 644 "$backup/compiler.conf" "$dropin"
+  else
+    rm -f "$dropin"
+  fi
+  systemctl daemon-reload
+  systemctl restart "$service"
+  wait_compiler
+}
+
+if [[ $operation == rollback ]]; then
+  # A late browser result must never revert someone else's release.
+  [[ $(readlink "$base/current") == "$release/browser" ]]
+  [[ $(systemctl show -p WorkingDirectory --value "$service") == "$release/compiler" ]]
+  restore
+  echo "Restored Learning Lab from $backup"
+  exit
+fi
+
+[[ $operation == install && ! -e $release && ! -e $backup ]]
+[[ -s browser/index.html && -s browser/preview/runtime.js ]]
+[[ -s compiler/main.js && -s compiler/compiler/worker.js && -d compiler/node_modules ]]
+current_compiler=$(systemctl show -p WorkingDirectory --value "$service")
+[[ $current_compiler == /var/www/giorgi-products/current/compiler || $current_compiler == "$base"/releases/*/compiler ]]
+
+install -d -m 755 "$release" "$(dirname "$dropin")"
+install -d -m 700 "$backup"
+readlink "$base/current" >"$backup/browser"
+if [[ -f $dropin ]]; then cp -p "$dropin" "$backup/compiler.conf"; fi
+cp -a browser compiler "$release/"
+chown -hR root:root "$release"
+chmod -R a+rX,go-w "$release"
+
+# Restore both halves on installation or smoke-test failure.
+trap 'result=$?; trap - EXIT; if (( result != 0 )); then (set -e; restore); fi; exit "$result"' EXIT
+cat >"$dropin.next" <<UNIT
+[Service]
+WorkingDirectory=$release/compiler
+Environment=COMPILER_NODE_MODULES=$release/compiler/node_modules
+UNIT
+chmod 644 "$dropin.next"
+mv -Tf "$dropin.next" "$dropin"
+systemctl daemon-reload
+systemctl restart "$service"
+wait_compiler
+
+curl -fsS --max-time 20 http://127.0.0.1:3301/api/compile \
+  -H 'Content-Type: application/json' \
+  -d '{"componentTs":"import {Component} from \"@angular/core\"; @Component({selector:\"app-demo\",template:\"<h2>{{title}}</h2>\"}) export class DemoComponent {title=\"Lab\";}"}' \
+  -o "$backup/smoke.json"
+python3 - "$backup/smoke.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as f:
+    result = json.load(f)
+files = [file for file in result.get("files", []) if file["path"].endswith("/demo.component.js")]
+if not result.get("ok") or not any(
+    "ɵɵdefineComponent" in file["content"] and file.get("templateMap", {}).get("mappings")
+    and isinstance(file["templateMap"].get("sourceIndex"), int) for file in files
+):
+    sys.exit("The production compiler did not emit the smoke component and its template map")
 PY
-ln -sfn "$release" "$base/current"
-install -m 644 "$stage/site.next" "$site.next"
-mv -Tf "$site.next" "$site"
-nginx -t;systemctl reload nginx
-ready=false
-for attempt in {1..10};do
- if curl -fsS --max-time 20 --resolve angular-compiler.giorgi.app:443:127.0.0.1 https://angular-compiler.giorgi.app/ -o "$stage/served.html" && cmp -s "$stage/served.html" "$release/index.html";then ready=true;break;fi
- sleep 1
-done
-$ready
-for host in giorgi.app auth.giorgi.app hls-player.giorgi.app toolbox.giorgi.app status.giorgi.app api.giorgi.app smart-todolist.giorgi.app;do curl -fsSL --max-time 20 "https://$host/" >/dev/null;done
-[[ $(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://angular-compiler.giorgi.app/api/learning/experiments) == 401 ]]
-for host in example-mcp mcp;do [[ $(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "https://$host.giorgi.app/") == 410 ]];done
-! systemctl is-active --quiet giorgi-example-mcp
-! systemctl is-active --quiet giorgi-mcp-gateway
-echo "PASS inspected Learning Lab release $source_id; accounts/APIs and other apps preserved. Backup: $backup"
+switch_browser "$release/browser"
+curl -fsS --max-time 15 "${local_https[@]}" "$lab/" -o "$backup/served.html"
+cmp -s "$backup/served.html" "$release/browser/index.html"
+[[ $(curl -sS --max-time 10 "${local_https[@]}" -o /dev/null -w '%{http_code}' "$lab/api/learning/experiments") == 401 ]]
+install -m 700 install-learning-lab.sh "$backup/installer"
+echo "Activated Learning Lab $release_id. Rollback state is in $backup."

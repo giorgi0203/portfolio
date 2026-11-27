@@ -141,10 +141,13 @@ export class AotCompilerService {
       workspaceNodeModules = path.join(process.cwd(), 'node_modules');
     }
 
+    // Only complete components preserve offsets into the submitted editor source.
+    const isCompleteComponent = /@Component\s*\(/.test(request.componentTs);
+
     // Write tsconfig.json with the correct node_modules path
     fs.writeFileSync(
       path.join(projectDir, 'tsconfig.json'),
-      getTsConfigJson(workspaceNodeModules)
+      getTsConfigJson(workspaceNodeModules, isCompleteComponent)
     );
 
     // Write package.json
@@ -158,7 +161,6 @@ export class AotCompilerService {
 
     // Write component file
     const hasStyles = !!request.styleCss;
-    const isCompleteComponent = /@Component\s*\(/.test(request.componentTs);
     const componentContent = getComponentTs(
       request.componentTs,
       !isCompleteComponent && !!request.templateHtml,
