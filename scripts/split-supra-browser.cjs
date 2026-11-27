@@ -191,9 +191,26 @@ async function localHarness() {
       assert.equal(new URL(home.url()).pathname, '/');
       await home.locator('#confirm-scan').check();
     }
-    await home
-      .getByRole('button', { name: 'Open table', exact: false })
-      .click();
+    // Capture our fixture's owner credential even if the next screen fails to render.
+    const [created] = await Promise.all([
+      home.waitForResponse(
+        (response) =>
+          response.url() === base + '/api/supra/rooms' &&
+          response.request().method() === 'POST',
+      ),
+      home.getByRole('button', { name: 'Open table', exact: false }).click(),
+    ]);
+    assert.equal(created.status(), 201, 'The fixture table should be created');
+    const createdData = await created.json();
+    assert.ok(
+      /^[a-zA-Z0-9_-]{32}$/.test(createdData.room?.id) &&
+        /^[a-zA-Z0-9_-]{43}$/.test(createdData.participantToken),
+      'The create response must return the table id and its owner credential',
+    );
+    cleanupRoom = {
+      id: createdData.room.id,
+      token: createdData.participantToken,
+    };
     await home
       .getByRole('heading', { name: 'Receipt browser check' })
       .waitFor();
@@ -208,7 +225,10 @@ async function localHarness() {
       id,
     );
     assert.ok(!link.includes(token));
-    cleanupRoom = { id, token };
+    assert.ok(
+      id === cleanupRoom.id && token === cleanupRoom.token,
+      'The seat in this browser must match the new fixture table',
+    );
     const code = qrcode(0, 'M');
     code.addData(link);
     code.make();
