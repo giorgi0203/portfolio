@@ -603,6 +603,22 @@ test('only Split the Supra can read a credentialed receipt session and use the s
   app.users.set(TOKEN, USER);
   const scanned = await app.call('/api/receipt/analyze', opts);
   assert.equal(scanned.status, 200);
+  const format = app.providerBodies[0].response_format;
+  assert.equal(format.type, 'json_schema');
+  assert.equal(format.json_schema.strict, true);
+  const schema = format.json_schema.schema;
+  assert.equal(schema.additionalProperties, false);
+  assert.equal(schema.properties.items.items.additionalProperties, false);
+  assert.deepEqual(schema.properties.items.items.required, [
+    'name',
+    'quantity',
+    'unitPrice',
+    'lineTotal',
+  ]);
+  assert.deepEqual(schema.properties.items.items.properties.unitPrice.type, [
+    'string',
+    'null',
+  ]);
   assert.equal(scanned.body.items[0].unitPrice, '2.50');
   assert.equal(scanned.body.remaining, 2);
   assert.equal(
@@ -617,6 +633,9 @@ test('only Split the Supra can read a credentialed receipt session and use the s
   app.advance(60_001);
   const menu = await app.scan();
   assert.equal(menu.status, 200);
+  assert.deepEqual(app.providerBodies[1].response_format, {
+    type: 'json_object',
+  });
   assert.equal(menu.body.items[0].category, 'main');
   assert.equal(app.providerCalls(), 2);
   session = await app.call('/api/receipt/session', {
@@ -638,6 +657,7 @@ test('unreadable and malformed receipt data fail closed; sign-in returns only to
     body: { image: image() },
   });
   assert.equal(scan.status, 502);
+  assert.deepEqual(scan.body.diagnostic, { code: 'receipt_shape' });
   const start = await app.call('/api/auth/sso/start?returnTo=/supra');
   const state = new URL(start.headers.get('location')).searchParams.get(
     'state',
@@ -648,4 +668,92 @@ test('unreadable and malformed receipt data fail closed; sign-in returns only to
   );
   assert.equal(callback.status, 303);
   assert.equal(callback.headers.get('location'), RECEIPT_ORIGIN + '/');
+});
+
+test('receipt failures expose only stable diagnostics and never retry or echo upstream content', async (t) => {
+  const cases = [
+    [
+      'http error',
+      () =>
+        new Response(
+          JSON.stringify({
+            error: { code: 'invalid_json_schema', message: 'private-data' },
+          }),
+          { status: 400 },
+        ),
+      502,
+      {
+        code: 'provider_http',
+        upstreamStatus: 400,
+        providerCode: 'invalid_json_schema',
+      },
+    ],
+    [
+      'untrusted upstream code',
+      () =>
+        new Response(JSON.stringify({ error: { code: 'private-data' } }), {
+          status: 500,
+        }),
+      502,
+      { code: 'provider_http', upstreamStatus: 500 },
+    ],
+    [
+      'upstream non-JSON',
+      () => new Response('private-data'),
+      502,
+      { code: 'provider_non_json' },
+    ],
+    [
+      'missing completion message',
+      () => reply({ message: 'private-data' }),
+      502,
+      { code: 'provider_envelope' },
+    ],
+    [
+      'invalid transcription',
+      () => reply({ choices: [{ message: { content: 'private-data' } }] }),
+      502,
+      { code: 'receipt_non_json' },
+    ],
+    [
+      'truncated',
+      () =>
+        reply({
+          choices: [
+            { finish_reason: 'length', message: { content: 'private-data' } },
+          ],
+        }),
+      502,
+      { code: 'receipt_truncated' },
+    ],
+    [
+      'refusal',
+      () => reply({ choices: [{ message: { refusal: 'private-data' } }] }),
+      422,
+      { code: 'receipt_refused' },
+    ],
+    [
+      'transport',
+      () => {
+        throw new Error('private-data');
+      },
+      502,
+      { code: 'provider_transport' },
+    ],
+  ];
+  for (const [description, provider, status, diagnostic] of cases) {
+    await t.test(description, async (sub) => {
+      const app = await fixture(sub, { provider });
+      const scan = await app.call('/api/receipt/analyze', {
+        method: 'POST',
+        origin: RECEIPT_ORIGIN,
+        cookie: '__Host-giorgi_decisions=' + TOKEN,
+        body: { image: image() },
+      });
+      assert.equal(scan.status, status);
+      assert.deepEqual(scan.body.diagnostic, diagnostic);
+      assert.ok(!JSON.stringify(scan.body).includes('private-data'));
+      assert.equal(app.providerCalls(), 1);
+    });
+  }
 });

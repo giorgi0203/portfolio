@@ -468,7 +468,12 @@ export function createMenuService({
       if (error instanceof MenuProblem) {
         if (error.retryAfter)
           res.setHeader('Retry-After', String(error.retryAfter));
-        send(res, error.status, { error: error.message });
+        send(res, error.status, {
+          error: error.message,
+          ...(receipt && error.diagnostic
+            ? { diagnostic: error.diagnostic }
+            : {}),
+        });
       } else {
         // Never log image bodies, session tokens, menu content or provider errors.
         send(res, 500, {

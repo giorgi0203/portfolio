@@ -36,6 +36,45 @@ def check(ok, message):
         raise ValueError(message)
 
 
+def safe_failure_detail(response):
+    """Read only fixed diagnostic fields; never print an HTML body or provider message."""
+    stage_hints = {
+        'provider_http': 'upstream rejected the request',
+        'provider_transport': 'upstream connection failed',
+        'provider_timeout': 'upstream timed out',
+        'scan_cancelled': 'client cancelled the request',
+        'provider_empty': 'upstream sent an empty body',
+        'provider_response_size': 'upstream response exceeded the byte limit',
+        'provider_non_json': 'upstream returned non-JSON content',
+        'provider_envelope': 'upstream response lacked a Chat Completions message',
+        'receipt_non_json': 'model message contained invalid JSON',
+        'receipt_shape': 'model fields failed receipt validation',
+        'receipt_refused': 'model declined to transcribe the image',
+        'receipt_truncated': 'model reached the response length limit',
+    }
+    known_provider_codes = {
+        'invalid_api_key','insufficient_quota','rate_limit_exceeded','model_not_found',
+        'invalid_json_schema','unsupported_response_format','unsupported_parameter',
+        'unsupported_value','invalid_request_error','invalid_image','invalid_image_format',
+        'invalid_value','server_error','content_policy_violation',
+    }
+    try:
+        data = json.loads(response.read(4096))
+        diagnostic = data.get('diagnostic', {})
+        hint = stage_hints.get(diagnostic.get('code'))
+        if not hint:
+            return ''
+        status = diagnostic.get('upstreamStatus')
+        if isinstance(status, int) and 400 <= status <= 599:
+            hint += f', upstream HTTP {status}'
+        code = diagnostic.get('providerCode')
+        if code in known_provider_codes:
+            hint += ', ' + code
+        return ' (' + hint + ')'
+    except (ValueError, AttributeError, TypeError):
+        return ''
+
+
 def verify(fixture):
     photo = 'data:image/png;base64,' + base64.b64encode(fixture.read_bytes()).decode()
     user_id = str(uuid.uuid4())
@@ -66,7 +105,8 @@ def verify(fixture):
         except urllib.error.HTTPError as error:
             response = error
         with response:
-            check(response.status == status, f'{step} returned HTTP {response.status}.')
+            if response.status != status:
+                raise ValueError(f'{step} returned HTTP {response.status}{safe_failure_detail(response)}.')
             if origin == SUPRA and url.startswith(DECISIONS + '/api/receipt/'):
                 check(response.headers.get('Access-Control-Allow-Origin') == SUPRA and
                       response.headers.get('Access-Control-Allow-Credentials') == 'true',
