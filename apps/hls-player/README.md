@@ -6,6 +6,10 @@ Streams are fetched directly in the browser, with request timeouts and cancellat
 
 The URL input is the only place that retains a full user URL. Diagnostic exports and timeline entries contain source **origins only**, without paths, query strings, fragments, credentials, raw playlist contents, key URLs, or raw Hls.js error objects. Existing site analytics records only a generic page view and referring hostname, honoring DNT/GPC; stream URLs and playback diagnostics are never sent to analytics.
 
+## Stream Doctor
+
+Play a stream and select a buffering event to inspect the playable buffer, rendition and nearby segment requests. The player distinguishes startup, seeking and rebuffering. The chart shows up to 60 buffer samples and the list retains the latest 24 waits for the current source. On native playback the browser supplies buffer and playback events. Hls.js can additionally report segment and part numbers, HTTP status, redacted origins and measured transfer times.
+
 ## Check
 
 ```bash
@@ -17,3 +21,5 @@ HLS_URL=http://127.0.0.1:4301 node scripts/hls-inspector-browser.cjs
 The browser script accepts `HLS_URL`, `CHROME_PATH`, and `PLAYWRIGHT_MODULE`. It can run against the deployed HTTPS app; stream requests are intercepted inside Playwright and fulfilled from local fixtures. Tests cover real H264/AAC playback, variants, quality selection, loaded segment metrics, redacted downloads, copy fallback, mobile layout, 404/retry, malformed playlists, cancellation, and live detection. The binary `.ts.bin` fixtures are FFmpeg-generated test-pattern/sine-wave MPEG-TS media, not executable TypeScript or third-party video. They are test-only and are excluded from the published static assets.
 
 Report values reflect observed browser data. Missing bitrate/codecs, unknown live latency, native playback internals, and encrypted-media details remain unavailable rather than being inferred as successful measurements.
+
+The Stream Doctor release workflow builds and tests this app, switches the HLS host’s static release symlink, and exercises an actual segment delay in public Chromium checks. A failed release check restores the preceding symlink.

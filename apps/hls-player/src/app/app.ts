@@ -1,11 +1,14 @@
 import { Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import Hls, { type LoaderStats } from 'hls.js';
+import Hls, { type Fragment, type Part, type LoaderStats } from 'hls.js';
 import { finiteValue, parsePlaylist, readPlaylist, resourceOrigin, validateStreamUrl, type PlaylistSummary, type Rendition } from './diagnostics';
+
+import { StreamDoctor, type WaitEnd } from './stream-doctor';
+import { StreamDoctorComponent } from './stream-doctor.component';
 
 interface NetworkEntry { time: string; kind: string; result: string; origin: string; bytes: number | null; milliseconds: number | null; throughput: number | null; }
 interface AudioTrack { index: number; label: string; }
-@Component({ imports: [FormsModule], selector: 'app-root', templateUrl: './app.html', styleUrl: './app.css' })
+@Component({ imports: [FormsModule,StreamDoctorComponent], selector: 'app-root', templateUrl: './app.html', styleUrl: './app.css' })
 export class App implements OnDestroy {
   @ViewChild('videoElement', { static: true }) videoElement!: ElementRef<HTMLVideoElement>;
   videoUrl = '';
@@ -46,6 +49,7 @@ export class App implements OnDestroy {
   listedDuration: number | null = null;
   encrypted = false;
   entries: NetworkEntry[] = [];
+  doctor = new StreamDoctor();
 
   ngOnDestroy() { this.stop(); }
   async changeVideoUrl(input: string) {
@@ -86,6 +90,7 @@ export class App implements OnDestroy {
     } finally { clearTimeout(timer); }
   }
   private resetDiagnostics() {
+    this.doctor = new StreamDoctor();
     this.playlist = null; this.entries = []; this.qualityLevels = []; this.audioTracks = [];
     this.selectedQuality = -1; this.selectedAudio = -1; this.currentLevel = -1; this.currentTime = 0;
     this.duration = null; this.bufferSeconds = 0; this.bufferedRanges = 'None'; this.bandwidth = null; this.liveLatency = null;
@@ -114,9 +119,18 @@ export class App implements OnDestroy {
       hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => { this.currentLevel = data.level; this.log('Quality', 'Now level ' + data.level, url); });
       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => this.updateAudio());
       hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (_event, data) => { this.selectedAudio = data.id; this.log('Audio', 'Track changed', url); });
-      hls.on(Hls.Events.FRAG_LOADING, (_event, data) => this.log('Segment', 'Requested', data.frag.url));
+      const doctor = this.doctor;
+      hls.on(Hls.Events.FRAG_LOADING, (_event, {frag,part}) => {
+        this.log('Segment', 'Requested', part?.url || frag.url);
+        doctor.requested(part || frag, this.segmentInfo(frag,part));
+      });
+      hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, (_event, {frag,part}) => {
+        doctor.finished(part || frag, 'Aborted');
+      });
       hls.on(Hls.Events.FRAG_LOADED, (_event, data) => {
         const stats = data.part?.stats || data.frag.stats;
+        const transport = data.networkDetails as {status?:number} | null;
+        doctor.finished(data.part || data.frag, 'Loaded', stats.loading.end - stats.loading.start, transport?.status);
         this.segmentTime = finiteValue(stats.loading.end - stats.loading.start); this.segmentBytes += stats.loaded;
         this.loadedSegments++; this.logStats('Segment', 'Loaded', data.frag.url, stats); this.updateMedia();
       });
@@ -124,7 +138,13 @@ export class App implements OnDestroy {
         const detail = /^[a-zA-Z0-9_-]{1,80}$/.test(data.details) ? data.details : 'streamError';
         const status = typeof data.response?.code === 'number' ? ' · HTTP ' + data.response.code : '';
         this.log(data.fatal ? 'Error' : 'Warning', detail + status, data.url || url);
+        if (data.frag && (detail === Hls.ErrorDetails.FRAG_LOAD_ERROR || detail === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT)) {
+          const timing = data.stats?.loading;
+          doctor.finished(data.part || data.frag, detail === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ? 'Timed out' : 'Failed',
+            timing && timing.end > 0 ? timing.end - timing.start : undefined, data.response?.code);
+        }
         if (data.fatal) {
+          doctor.finishWait('Playback failed', performance.now());
           this.hasError = true; this.isLoading = false; this.status = 'Playback failed'; hls.stopLoad();
           this.errorMessage = data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'A playlist, segment, or key request failed' + status + '. Check server CORS permissions and stream availability, then retry.' : 'The browser could not decode this stream (' + detail + '). Try another rendition or a compatible stream.';
         }
@@ -138,6 +158,18 @@ export class App implements OnDestroy {
       this.engine = 'Playback unavailable'; this.status = 'Manifest inspected'; this.isLoading = false;
       this.hasError = true; this.errorMessage = 'This browser cannot play HLS. You can still inspect the playlist metadata. Try a browser with Hls.js MediaSource or native HLS support.';
     }
+  }
+  private renditionLabel(index: number) {
+    if (index < 0) return 'Unavailable';
+    const level = this.qualityLevels[index];
+    return ['Level '+index, level?.height ? level.height+'p' : '', level?.bitrate ? this.kbps(level.bitrate) : ''].filter(Boolean).join(' · ');
+  }
+  private segmentInfo(frag: Fragment, part?: Part | null) {
+    return {
+      sequence:frag.sn, part:part?.index ?? null, track:frag.type, level:frag.level,
+      start:part?.start ?? frag.start, duration:part?.duration ?? frag.duration,
+      url:part?.url || frag.url, rendition:frag.type==='audio' ? 'Audio track '+frag.level : this.renditionLabel(frag.level),
+    };
   }
   private updateLevels() {
     if (!this.hls) return;
@@ -163,7 +195,17 @@ export class App implements OnDestroy {
       this.bandwidth = this.loadedSegments ? finiteValue(this.hls.bandwidthEstimate) : null;
       this.liveLatency = this.streamType === 'Live' && this.loadedSegments > 0 && this.hls.liveSyncPosition !== null ? finiteValue(this.hls.latency) : null;
     }
+    if ((this.hls || this.engine.startsWith('Native')) && (!video.paused || event?.type==='loadedmetadata')) {
+      this.doctor.sample(this.bufferSeconds,performance.now());
+    }
     if (event) {
+      if (event.type==='waiting' && !video.paused && !video.ended && (this.hls || this.engine.startsWith('Native'))) {
+        this.doctor.waiting(this.currentTime,this.bufferSeconds,this.renditionLabel(this.currentLevel),
+          !this.hls,video.seeking,performance.now());
+      }
+      const ends: Partial<Record<string,WaitEnd>> = {playing:'Playing',pause:'Paused',seeking:'Seek started',ended:'Ended'};
+      const end = ends[event.type];
+      if (end) this.doctor.finishWait(end,performance.now());
       const states: Record<string, string> = { play: 'Playing', playing: 'Playing', pause: 'Paused', waiting: 'Buffering', stalled: 'Waiting for data', ended: 'Ended', loadedmetadata: 'Ready · press play' };
       if (states[event.type]) { this.status = states[event.type]; this.log('Playback', states[event.type], this.videoUrl); }
       if (event.type === 'loadedmetadata') this.isLoading = false;
@@ -172,6 +214,7 @@ export class App implements OnDestroy {
   mediaError() {
     if (!this.active || this.hasError) return;
     this.hasError = true; this.isLoading = false; this.status = 'Playback failed';
+    this.doctor.finishWait('Playback failed', performance.now());
     this.errorMessage = 'The browser reported a media decoding or loading error. Inspect the stream codecs and CORS settings, or try a compatible rendition.';
     this.log('Error', 'Browser media error', this.videoUrl);
   }
@@ -182,6 +225,7 @@ export class App implements OnDestroy {
   chooseAudio(event: Event) { this.selectedAudio = Number((event.target as HTMLSelectElement).value); if (this.hls) this.hls.audioTrack = this.selectedAudio; }
   retry() { this.retryCount++; const count = this.retryCount; void this.changeVideoUrl(this.videoUrl).then(() => this.retryCount = count); }
   stop(markStopped = true) {
+    this.doctor.finishWait('Stopped',performance.now());
     this.generation++; this.active = false; this.controller?.abort('cancelled'); this.controller = undefined;
     if (this.poll) clearInterval(this.poll); this.poll = undefined;
     this.hls?.destroy(); this.hls = null;
@@ -202,7 +246,7 @@ export class App implements OnDestroy {
       playlist: this.playlist ? { ...this.playlist, renditions: this.qualityLevels } : null,
       playback: { streamType: this.streamType, currentTimeSeconds: this.currentTime, durationSeconds: this.duration, bufferedSeconds: this.bufferSeconds, bufferedRanges: this.bufferedRanges, selectedQuality: this.selectedQuality, activeLevel: this.currentLevel, bandwidthEstimateBps: this.bandwidth, liveLatencySeconds: this.liveLatency },
       media: { type: this.streamType, targetDurationSeconds: this.targetDuration, listedSegments: this.mediaSegments, listedDurationSeconds: this.listedDuration, encrypted: this.encrypted, availableAudioTracks: this.audioTracks.length },
-      network: { inspectionMilliseconds: this.manifestTime, loadedSegments: this.loadedSegments, segmentBytes: this.segmentBytes, latestSegmentMilliseconds: this.segmentTime }, events: this.entries };
+      network: { inspectionMilliseconds: this.manifestTime, loadedSegments: this.loadedSegments, segmentBytes: this.segmentBytes, latestSegmentMilliseconds: this.segmentTime }, events: this.entries, bufferingEvents:this.doctor.waits };
   }
   async copyReport() { try { await navigator.clipboard.writeText(JSON.stringify(this.report(), null, 2)); this.copyMessage = 'Redacted report copied.'; } catch { this.copyMessage = 'Clipboard unavailable. Download the report instead.'; } }
   downloadReport() { const blob = new Blob([JSON.stringify(this.report(), null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'hls-diagnostics.json'; a.click(); URL.revokeObjectURL(url); this.copyMessage = 'Redacted report downloaded.'; }
