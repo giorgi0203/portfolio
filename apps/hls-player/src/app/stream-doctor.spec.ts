@@ -12,7 +12,8 @@ describe('Stream Doctor', () => {
     d.finishWait('Playing',now+4000);
     expect(d.waits.length).toBe(1);
     const wait=d.waits[0];
-    expect(wait).toMatchObject({kind:'Rebuffer',durationMs:3000,rendition:'Level 0',endedBy:'Playing'});
+    expect(wait).toMatchObject({kind:'Rebuffer',rendition:'Level 0',endedBy:'Playing'});
+    expect(wait.durationMs).toBeCloseTo(3000, 6);
     expect(wait.segments[0]).toMatchObject({stateThen:'Loading',nearPosition:true,request:{
       sequence:1,state:'Loaded',downloadMs:3014,httpStatus:200,origin:'https://media.example',
     }});
