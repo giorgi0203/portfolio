@@ -20,8 +20,15 @@ const {learningLessons}=require('../apps/angular-compiler-ui/src/app/lessons.ts'
    await page.waitForFunction(count=>document.querySelectorAll('.check-results li').length===count&&document.querySelectorAll('.check-results li.passed').length===count,lesson.checks.length);
    console.log('PASS real browser challenge starter fails and solution passes:',lesson.id);
   }
+  // Save and share the parent/child example that the second browser will interact with.
+  const communicationIndex=learningLessons.findIndex(lesson=>lesson.id==='communication');
+  assert.ok(communicationIndex>=0);
+  await selectLesson(communicationIndex);
+  await updateSource(learningLessons[communicationIndex].solution);
+  await page.getByRole('button',{name:/Run preview$/}).click();
+  await page.frameLocator('iframe[title="Live Angular preview"]').locator('#child-add').waitFor();
   assert.equal(await page.locator('iframe[title="Live Angular preview"]').getAttribute('sandbox'),'allow-scripts');
-  assert.match(await page.locator('.state-values').innerText(),/count/);
+  await page.locator('.state-values').filter({hasText:'count'}).waitFor();
   await page.getByLabel('Experiment name',{exact:true}).fill('My saved learning experiment');await page.getByRole('button',{name:'Save',exact:true}).click();
   await page.locator('.load-experiment').filter({hasText:'My saved learning experiment'}).waitFor();
   await page.getByRole('button',{name:'Share ↗',exact:true}).click();

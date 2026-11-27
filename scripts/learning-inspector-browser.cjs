@@ -1,4 +1,4 @@
-/** Real rendered Angular inspection and real AOT output; one compile request per run. */
+/** Verify packaged lesson output, real compilation and the running Angular preview together. */
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const fs = require('node:fs');
@@ -53,10 +53,21 @@ async function localHarness() {
     });
     const page = await context.newPage(); page.setDefaultTimeout(60000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
+    const sentSources = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/compile') {
+        sentSources.push(request.postDataJSON().componentTs);
+      }
+    });
     await page.goto(process.env.LAB_URL || harness.url, { waitUntil: 'domcontentloaded' });
     await page.locator('app-code-editor .monaco-editor').waitFor();
     await page.locator('app-compiler-explorer').waitFor({ state: 'visible' });
     await page.getByRole('heading', { name: 'From template to instructions', exact: true }).waitFor();
+    await page.locator('app-compiler-explorer .generated-line').filter({ hasText: /ɵɵtextInterpolate.*ctx\.count\(/ }).waitFor();
+    assert.deepEqual(sentSources, [], 'Built-in lessons open with packaged AOT and no compiler requests');
+    const panels = page.getByRole('navigation', { name: 'Workspace panels' });
+    await panels.getByRole('button', { name: 'Preview' }).filter({ hasText: 'Count: 0' }).waitFor();
+    await panels.getByRole('button', { name: 'Compiler' }).filter({ hasText: 'textInterpolate' }).waitFor();
     const preview = () => page.frameLocator('iframe[title="Live Angular preview"]');
     const editor = source => page.evaluate(value => window.monaco.editor.getModels().find(model => model.getLanguageId() === 'typescript').setValue(value), source);
     const lastPacket = type => page.evaluate(type => [...window.__labInspectionPackets].reverse().find(packet => packet.type === type), type);
@@ -70,10 +81,19 @@ async function localHarness() {
     };
     const currentSelection = () => page.evaluate(() => [...window.__labInspectionPackets].reverse().find(packet => packet.type === 'learning:inspect')?.selection);
     const waitSelection = block => page.waitForFunction(block => [...window.__labInspectionPackets].reverse().find(packet => packet.type === 'learning:inspect')?.selection?.blockId === block, block);
+    const selectTemplate = block => page.evaluate(range => {
+      const editor = window.monaco.editor.getEditors().find(editor => editor.getModel()?.getLanguageId() === 'typescript');
+      editor.focus();
+      editor.setSelection({
+        startLineNumber: range.startLine, startColumn: range.startColumn,
+        endLineNumber: range.endLine, endColumn: range.endColumn,
+      }, 'keyboard');
+    }, block);
 
     // Hover never executes the event expression; clicking still invokes the real Angular handler.
     const signals = learningLessons.find(lesson => lesson.id === 'signals').solution;
     const blocks = await run(signals);
+    assert.deepEqual(sentSources, [], 'Running an edited preview keeps its source in the browser');
     const increment = blocks.find(block => block.tag === 'button' && block.bindings.some(binding => binding.expression.includes('count.update')));
     assert.ok(increment, 'Button must map to the actual Angular event binding');
     assert.equal(increment.start, signals.indexOf('<button id="increment"'));
@@ -109,6 +129,7 @@ async function localHarness() {
     await actualReply;
     if(compileFailure)throw compileFailure;
     if(compiledResponse.status!==200||!compiledResponse.body.ok){releaseReply();throw new Error('Actual AOT failed: '+JSON.stringify(compiledResponse));}
+    assert.ok(compiledResponse.body.files.some(file => file.templateMap?.mappings), 'The live compiler must return its original template mappings');
     await editor('// New edit after compilation began.\n\n'+signals);
     await page.locator('.stale-preview').waitFor();
     await preview().locator('h2').hover();
@@ -117,19 +138,95 @@ async function localHarness() {
     await page.locator('.learning-source-highlight').waitFor({state:'detached'});
     releaseReply();
     await page.locator('app-compiler-explorer .stale-output').waitFor();
+    await page.unroute('**/api/compile');
+    const explorer = page.locator('app-compiler-explorer');
+    const countLine = explorer.locator('.generated-line').filter({ hasText: /ɵɵtextInterpolate.*ctx\.count\(/ });
+    const doubleLine = explorer.locator('.generated-line').filter({ hasText: /ɵɵtextInterpolate.*ctx\.doubled\(/ });
+    await countLine.click();
+    assert.equal(await explorer.getByRole('button', { name: 'Show related source' }).isDisabled(), true);
+    assert.equal(await explorer.locator('.observed-text').count(), 0, 'Old output cannot claim values from a newer edit');
     await editor(signals);
     await page.locator('app-compiler-explorer .stale-output').waitFor({ state: 'detached' });
     await page.getByRole('button', { name: 'Annotated', exact: true }).click();
     await page.locator('app-compiler-explorer .compiler-comment').first().waitFor();
     assert.match(await page.locator('app-compiler-explorer .generated-code').innerText(), /ɵɵdefineComponent/);
-    await page.locator('app-compiler-explorer .instruction-list button[data-instruction*="Interpolate"]').first().click();
-    assert.match(await page.locator('app-compiler-explorer .instruction-explanation').innerText(), /text|binding|interpolat/i);
+    // The two adjacent <p> elements must keep their own source, Ivy call and rendered value.
+    const countBlock = blocks.find(block => block.tag === 'p' && block.source.includes('Count:'));
+    const doubleBlock = blocks.find(block => block.tag === 'p' && block.source.includes('Double:'));
+    assert.ok(countBlock && doubleBlock);
+    await countLine.click();
+    await waitSelection(countBlock.id);
+    await explorer.locator('.observed-text').filter({ hasText: 'Count: 1' }).waitFor();
+    await explorer.locator('.source-snippet').filter({ hasText: 'count()' }).waitFor();
+    assert.match(await explorer.locator('.argument-list').innerText(), /ctx\.count\(\)/);
+    assert.ok((await explorer.locator('.runtime-steps').innerText()).trim().length);
+    assert.match(await explorer.locator('.angular-source').getAttribute('href'), /^https:\/\/github\.com\/angular\/angular\/blob\/[^/]+\/packages\/core\//);
+    await selectTemplate(doubleBlock);
+    await waitSelection(doubleBlock.id);
+    await explorer.locator('.generated-line.selected').filter({ hasText: /ctx\.doubled\(\)/ }).waitFor();
+    await explorer.locator('.observed-text').filter({ hasText: 'Double: 2' }).waitFor();
+    await panels.getByRole('button', { name: 'Code' }).filter({ hasText: 'doubled()' }).waitFor();
+    await panels.getByRole('button', { name: 'Preview' }).filter({ hasText: 'Double: 2' }).waitFor();
+
+    await page.getByRole('button', { name: 'Unpin selection', exact: true }).click();
+    await preview().getByText('Count: 1', { exact: true }).hover();
+    await waitSelection(countBlock.id);
+    await explorer.locator('.generated-line.selected').filter({ hasText: /ctx\.count\(\)/ }).waitFor();
+    await preview().locator('#increment').click();
+    await preview().getByText('Count: 2', { exact: true }).waitFor();
+    await countLine.click();
+    await waitSelection(countBlock.id);
+    await explorer.locator('.observed-text').filter({ hasText: 'Count: 2' }).waitFor();
+    const change = explorer.locator('.dom-change').filter({ hasText: /Count: 1/ }).filter({ hasText: /Count: 2/ });
+    await change.first().waitFor();
+    console.log('PASS generated line, Monaco selection and preview hover link both sibling elements; decoded arguments, source reference and actual text mutation agree');
+
     await page.getByRole('button', { name: 'Show related source', exact: true }).click();
-    await page.getByText('Approximate source match', { exact: true }).waitFor();
+    await page.locator('.learning-source-highlight').first().waitFor();
+    await page.screenshot({ path: '/tmp/learning-inspector-desktop.png', fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Compiler', exact: true }).click();
+    await doubleLine.click();
+    await waitSelection(doubleBlock.id);
+    await explorer.locator('.observed-text').filter({ hasText: 'Double: 4' }).waitFor();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: '/tmp/learning-inspector-mobile.png', fullPage: true });
+    await explorer.getByRole('button', { name: 'Show related source' }).click();
+    await page.locator('app-code-editor .monaco-editor').waitFor({ state: 'visible' });
+    await page.setViewportSize({ width: 1680, height: 1100 });
     await page.getByRole('button', { name: 'Raw', exact: true }).click();
     await page.locator('app-compiler-explorer .compiler-comment').first().waitFor({state:'detached'});
     assert.equal(await page.locator('app-compiler-explorer .compiler-comment').count(), 0);
-    console.log('PASS real AOT output, annotations, source link, raw view and edited-during-compile stale labelling');
+    const revised = signals.replace('A tiny signal counter', 'My connected counter').replace(
+      '<p>Count: {{ count() }}</p>',
+      '<p id="outer">Count: {{ count() }}</p>\n' +
+      '    @if (count() >= 0) { <p id="inner">Count: {{ count() }}</p> }\n' +
+      '    @else { <p id="negative">Below zero: {{ count() }}</p> }',
+    );
+    await editor(revised);
+    assert.deepEqual(sentSources, [signals], 'Editing source sends no automatic compiler request');
+    await page.locator('.connect-workspace').click();
+    await preview().getByText('My connected counter', { exact: true }).waitFor();
+    await explorer.locator('.generated-line').filter({ hasText: /ɵɵtext\([^\n]+My connected counter/ }).waitFor();
+    assert.deepEqual(sentSources, [signals, revised], 'One run-and-compile action compiles the current revision once');
+    const nestedBinding = explorer.locator('.generated-line').filter({ hasText: /ɵɵtextInterpolate.*Count:.*ctx_r\d+\.count\(/ });
+    const outerBinding = explorer.locator('.generated-line').filter({ hasText: /ɵɵtextInterpolate.*Count:.*ctx\.count\(/ });
+    await preview().locator('#inner').hover();
+    await explorer.locator('.generated-line.selected').filter({ hasText: /ɵɵtextInterpolate.*ctx_r\d+\.count\(/ }).waitFor();
+    const revisedBlocks = (await lastPacket('learning:inspection-map')).blocks;
+    const outerParagraph = revisedBlocks.find(block => block.source.startsWith('<p id="outer"'));
+    const innerParagraph = revisedBlocks.find(block => block.source.startsWith('<p id="inner"'));
+    assert.ok(outerParagraph && innerParagraph);
+    await outerBinding.click();
+    await waitSelection(outerParagraph.id);
+    await nestedBinding.click();
+    await waitSelection(innerParagraph.id);
+    assert.notEqual(await outerBinding.getAttribute('data-line'), await nestedBinding.getAttribute('data-line'));
+    await explorer.locator('.generated-line').filter({ hasText: /ɵɵtextInterpolate.*Below zero:/ }).click();
+    await panels.getByRole('button', { name: 'Preview' }).filter({ hasText: 'not rendered' }).waitFor();
+    assert.equal(await explorer.locator('.observed-text').count(), 0, 'A hidden branch cannot display the live value from its sibling');
+    console.log('PASS original compiler mappings distinguish identical bindings across embedded views and report the hidden branch');
+    console.log('PASS packaged AOT, explicit real compilation, annotations, raw view, stale labelling and one-click reconnection');
 
     // Repeated nodes share a template range but must expose each real row's context.
     const list = learningLessons.find(lesson => lesson.id === 'lists').solution;
@@ -169,7 +266,7 @@ export class DemoComponent {count=0;}`;
     // Select a real source location in Monaco and verify it focuses its rendered block.
     const literalHeading=literalBlocks.find(block=>block.tag==='h2');
     await preview().locator('h2').hover();await waitSelection(literalHeading.id);
-    await page.evaluate(block => {const editor=window.monaco.editor.getEditors().find(editor => editor.getModel()?.getLanguageId() === 'typescript');editor.focus();editor.setSelection({ startLineNumber: block.startLine, startColumn: block.startColumn, endLineNumber: block.endLine, endColumn: block.endColumn }, 'keyboard');}, literalBlock);
+    await selectTemplate(literalBlock);
     await waitSelection(literalBlock.id);
     assert.equal((await currentSelection()).pinned,true,'Source selection must deliberately focus the matching preview block');
     const nested = `import { Component } from '@angular/core';
@@ -188,12 +285,6 @@ export class DemoComponent {groups=[{name:'Outer group',items:[{label:'Inner-one
     assert.match((await currentSelection()).reason,/not statically mapped|no exact source/i);
     await preview().getByText('Value 0',{exact:true}).waitFor();
     console.log('PASS nested-scope limits and explicitly unmapped computed templates');
-    await page.screenshot({ path: '/tmp/learning-inspector-desktop.png', fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole('button', { name: 'Compiler', exact: true }).click();
-    await page.locator('app-compiler-explorer').waitFor({ state: 'visible' });
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: '/tmp/learning-inspector-mobile.png', fullPage: true });
     assert.deepEqual(errors, []);
     console.log('PASS escaped literal mapping, source-to-preview focus and mobile compiler access');
   } finally { await browser.close(); if (harness) await harness.close(); }

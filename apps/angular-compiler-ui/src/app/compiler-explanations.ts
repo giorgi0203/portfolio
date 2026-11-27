@@ -1,6 +1,9 @@
+import type { TemplateSourceMap } from 'shared-types';
+import { compilerSourceLinks } from './compiler-source-links';
+
 /** Explanations describe emitted Angular instructions, never a simulated execution trace. */
 export type CompilerPhase = 'creation' | 'update' | 'definition' | 'event' | 'helper';
-export interface SourceMatch {startLine:number;endLine:number;startColumn:number;endColumn:number;start:number;end:number;reason:string;approximate:true;}
+export interface SourceMatch {startLine:number;endLine:number;startColumn:number;endColumn:number;start:number;end:number;reason:string;approximate:boolean;}
 export interface CompilerInstruction {
   id:string;name:string;line:number;endLine:number;raw:string;phase:CompilerPhase;
   title:string;explanation:string;comment:string;bindings:string[];sourceMatch:SourceMatch|null;
@@ -25,6 +28,7 @@ const descriptions:Record<string,Description>={
   twoWayProperty:{title:'Send state to a two-way bound control',explanation:'This sends the current component value into a control. The companion listener handles values coming back from the control.',comment:'Send the current state into the two-way bound input.'},
   attribute:{title:'Update an HTML attribute',explanation:'Angular updates the string attribute named here. Unlike a property binding, a null value generally removes the attribute.',comment:'Apply the current value to an HTML attribute.'},
   conditional:{title:'Choose a conditional view',explanation:'Angular evaluates which conditional branch should be displayed and creates or removes the corresponding embedded view. A selected template index of -1 means no branch is shown.',comment:'Keep the selected @if/@else view and remove the inactive view.'},
+  conditionalBranchCreate:{title:'Prepare another conditional branch',explanation:'Angular registers another embedded view for the same conditional. The update pass selects the active branch.',comment:'Register the next branch of the condition.'},
   conditionalCreate:{title:'Prepare a conditional view',explanation:'Angular declares a conditional embedded view that can be selected later during an update. Creating the declaration does not mean every branch is displayed.',comment:'Declare an @if branch that an update can choose later.'},
   template:{title:'Declare an embedded template',explanation:'Angular registers a template function for an embedded view. Structural directives or control-flow instructions decide when instances of it appear.',comment:'Register a reusable embedded-view template.'},
   repeaterCreate:{title:'Prepare a tracked list',explanation:'Angular sets up the item template and tracking function for @for. Tracking identifies which rendered views belong to which items when the collection changes.',comment:'Set up the @for item template and its identity/track function.'},
@@ -50,7 +54,7 @@ function describe(name:string):Description {
 }
 
 /** Mask literals/comments without changing offsets; generated instruction text in strings is not executable code. */
-function maskJavaScript(source:string):string {
+export function maskJavaScript(source:string):string {
   const chars=source.split('');let index=0;
   while(index<source.length){
     const quote=source[index];
@@ -85,51 +89,122 @@ function regexMayStart(source:string,index:number):boolean {
 }
 function closeBracket(mask:string,start:number,open:string,close:string):number {let depth=0;for(let i=start;i<mask.length;i++){if(mask[i]===open)depth++;if(mask[i]===close&&--depth===0)return i;}return mask.length-1;}
 function sourceLine(source:string,index:number){return source.slice(0,index).split('\n').length;}
-function matchSource(raw:string,name:string,source:string,bindings:string[]):SourceMatch|null {
-  const key=name.replace(/^ɵɵ?/,'');
-  let index=-1,end=-1,reason='';
-  const interpolation=/\{\{([\s\S]*?)\}\}/g;
-  if(/Interpolate/.test(key))for(const match of source.matchAll(interpolation)){
-    if(bindings.some(binding=>new RegExp('\\b'+binding.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(match[1]))){index=(match.index??0);end=index+match[0].length;reason='An interpolation references the same component field as this emitted instruction.';break;}
+interface SourceFragment {text: string; start: number;}
+
+function templateFragments(source: string): SourceFragment[] {
+  if (source.trimStart().startsWith('<')) return [{text: source, start: 0}];
+  const fragments: SourceFragment[] = [];
+  for (const match of source.matchAll(/\btemplate\s*:\s*(`(?:\\[\s\S]|[^`\\])*`|'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*")/g)) {
+    fragments.push({text: match[1].slice(1, -1), start: match.index + match[0].length - match[1].length + 1});
   }
-  if(index<0&&/listener/i.test(key)){
-    const event=raw.match(/\(\s*(['"])([^'"]+)\1/);const attribute=/\([^)]*\)\s*=\s*(["'])([\s\S]*?)\1/g;
-    for(const match of source.matchAll(attribute))if((event&&match[0].includes('('+event[2]+')'))||bindings.some(binding=>match[2].includes(binding))){index=(match.index??0);end=index+match[0].length;reason='The template event or handler name matches this generated listener.';break;}
-  }
-  if(index<0&&/property|attribute|class|style/i.test(key)){
-    const attribute=/\[\(?[^\]]+\)?\]\s*=\s*(["'])([\s\S]*?)\1/g;
-    for(const match of source.matchAll(attribute))if(bindings.some(binding=>new RegExp('\\b'+binding+'\\b').test(match[2]))){index=(match.index??0);end=index+match[0].length;reason='A template binding references the same component field.';break;}
-  }
-  if(index<0&&/conditional/.test(key)){const match=/@if\s*\(|\*ngIf\s*=/.exec(source);if(match){index=match.index;end=index+match[0].length;reason='This source contains a conditional template block.';}}
-  if(index<0&&/repeater/.test(key)){const match=/@for\s*\(|\*ngFor\s*=/.exec(source);if(match){index=match.index;end=index+match[0].length;reason='This source contains a repeated template block.';}}
-  if(index<0&&/^(?:dom)?element(?:Start)?$/i.test(key)){
-    const tag=raw.match(/\(\s*\d+\s*,\s*(['"])([\w-]+)\1/);
-    if(tag){const match=new RegExp('<'+tag[2]+'(?=[\\s>])','i').exec(source);if(match){index=match.index;end=source.indexOf('>',index)+1;reason='An element tag in the template matches this creation instruction. Repeated tags may have several matches.';}}
-  }
-  if(index<0)return null;
-  return {startLine:sourceLine(source,index),endLine:sourceLine(source,Math.max(index,end)),startColumn:index-source.lastIndexOf('\n',index-1),endColumn:Math.max(index,end)-source.lastIndexOf('\n',Math.max(index,end)-1),start:index,end:Math.max(index,end),reason,approximate:true};
+  return fragments;
 }
-export function parseCompilerInstructions(code:string,source:string,path='component.js'):CompilerInstruction[]{
+
+/** Compatibility for previously saved output. Multiple matching occurrences do not establish a link. */
+function matchSource(raw: string, name: string, source: string, fragments: SourceFragment[], bindings: string[]): SourceMatch | null {
+  const key = name.replace(/^ɵɵ?/, '');
+  const words = (expression: string): string[] => expression.match(/[\w$]+/g) || [];
+  const sharesField = (expression: string) => bindings.some(field => words(expression).includes(field));
+  const firstArgument = raw.match(/\(\s*(['"])([^'"]+)\1/)?.[2];
+  let pattern: RegExp, reason: string;
+  let accept: (match: RegExpMatchArray) => boolean = () => true;
+  if (/^textInterpolate/.test(key)) {
+    pattern = /\{\{([\s\S]*?)\}\}/g;
+    accept = match => sharesField(match[1]);
+    reason = 'One interpolation references the same component field.';
+  } else if (/^(?:domListener|listener|twoWayListener)$/.test(key)) {
+    pattern = /\(([^()]+)\)\s*=\s*(["'])([\s\S]*?)\2/g;
+    accept = match => match[1] === firstArgument && (!bindings.length || sharesField(match[3]));
+    reason = 'One template event matches the generated listener.';
+  } else if (/^(?:(?:domP|p)roperty|attribute|classProp|styleProp|twoWayProperty)/.test(key)) {
+    pattern = /\[\(?([^\]()]+)\)?\]\s*=\s*(["'])([\s\S]*?)\2/g;
+    accept = match => match[1].replace(/^(?:attr|class|style)\./, '').split('.')[0] === firstArgument &&
+      (!bindings.length || sharesField(match[3]));
+    reason = 'One template binding matches the generated property name.';
+  } else if (/^(?:conditional|conditionalCreate)$/.test(key)) {
+    pattern = /@if\s*\(|\*ngIf\s*=/g;
+    reason = 'There is one conditional in this source.';
+  } else if (/^(?:repeater|repeaterCreate)$/.test(key)) {
+    pattern = /@for\s*\(|\*ngFor\s*=/g;
+    reason = 'There is one repeated block in this source.';
+  } else if (/^(?:dom)?element(?:Start)?$/i.test(key)) {
+    const tag = raw.match(/\(\s*\d+\s*,\s*(['"])([\w-]+)\1/)?.[2];
+    if (!tag) return null;
+    pattern = new RegExp('<' + tag + '(?=[\\s/>])(?:[^>"\']|"[^"]*"|\'[^\']*\')*>', 'gi');
+    reason = 'One element tag matches this creation instruction.';
+  } else return null;
+
+  let range: {start: number; end: number} | undefined;
+  for (const fragment of fragments) {
+    for (const match of fragment.text.matchAll(pattern)) {
+      if (!accept(match)) continue;
+      if (range) return null;
+      const start = fragment.start + match.index;
+      range = {start, end: start + match[0].length};
+    }
+  }
+  if (!range) return null;
+  const {start, end} = range;
+  return {startLine:sourceLine(source,start),endLine:sourceLine(source,end),startColumn:start-source.lastIndexOf('\n',start-1),
+    endColumn:end-source.lastIndexOf('\n',end-1),start,end,reason,approximate:true};
+}
+
+// Angular 21's template compiler chains adjacent compatible rendering instructions.
+const chainable = new Set([
+  'ariaProperty', 'attribute', 'classProp', 'element', 'elementContainer', 'elementContainerEnd', 'elementContainerStart',
+  'elementEnd', 'elementStart', 'domProperty', 'i18nExp', 'listener', 'property', 'styleProp', 'syntheticHostListener',
+  'syntheticHostProperty', 'template', 'twoWayProperty', 'twoWayListener', 'declareLet', 'conditionalCreate',
+  'conditionalBranchCreate', 'domElement', 'domElementStart', 'domElementEnd', 'domElementContainer',
+  'domElementContainerStart', 'domElementContainerEnd', 'domListener', 'domTemplate', 'animationEnter', 'animationLeave',
+  'animationEnterListener', 'animationLeaveListener',
+]);
+interface GeneratedCall {
+  name: string; start: number; open: number; end: number; receiver: number; indexInChain: number;
+}
+
+function generatedCalls(mask: string): GeneratedCall[] {
+  const calls: GeneratedCall[] = [];
+  for (const match of mask.matchAll(/(?<![\w$])(?:([\w$]+)\s*\.\s*)?(ɵɵ?[A-Za-z_$][\w$]*)\s*\(/g)) {
+    const receiver = match.index;
+    let name = match[2], start = receiver + match[0].indexOf(name);
+    let open = receiver + match[0].lastIndexOf('(');
+    for (let indexInChain = 0; ; indexInChain++) {
+      const end = closeBracket(mask, open, '(', ')');
+      calls.push({name, start, open, end, receiver, indexInChain});
+      if (calls.length >= 500) return calls.sort((a,b) => a.start-b.start);
+      if (!chainable.has(name.slice(2))) break;
+      open = end + 1;
+      while (open < mask.length && /\s/.test(mask[open])) open++;
+      if (mask[open] !== '(') break;
+      start = open;
+      if (name === 'ɵɵconditionalCreate') name = 'ɵɵconditionalBranchCreate';
+    }
+  }
+  return calls.sort((a,b) => a.start-b.start);
+}
+
+export function parseCompilerInstructions(code: string, source: string, path='component.js', map?: TemplateSourceMap): CompilerInstruction[] {
   const mask=maskJavaScript(code),ranges:Array<{start:number;end:number;phase:CompilerPhase}>=[];
   for(const match of mask.matchAll(/\bif\s*\(\s*[\w$]+\s*&\s*([12])\s*\)\s*\{/g)){
-    const start=(match.index??0)+match[0].lastIndexOf('{');ranges.push({start,end:closeBracket(mask,start,'{','}'),phase:match[1]==='1'?'creation':'update'});
+    const start=match.index+match[0].lastIndexOf('{');ranges.push({start,end:closeBracket(mask,start,'{','}'),phase:match[1]==='1'?'creation':'update'});
   }
+  const calls = generatedCalls(mask);
   const eventBodies:Array<{start:number;end:number}>=[];
-  for(const match of mask.matchAll(/ɵɵ(?:domListener|listener|twoWayListener)\s*\(/g)){
-    const open=(match.index??0)+match[0].lastIndexOf('('),end=closeBracket(mask,open,'(',')');
+  for(const {name,open,end} of calls){
+    if (!/^ɵɵ(?:domListener|listener|twoWayListener)$/.test(name)) continue;
     const callback=/\bfunction\b[^{}]*\{|=>\s*\{/.exec(mask.slice(open,end));
     if(callback){const start=open+callback.index+callback[0].lastIndexOf('{');eventBodies.push({start,end:closeBracket(mask,start,'{','}')});}
   }
-  const instructions:CompilerInstruction[]=[];
-  for(const match of mask.matchAll(/(?<![\w$])(ɵɵ?[A-Za-z_$][\w$]*)\s*\(/g)){
-    const start=(match.index??0),open=start+match[0].lastIndexOf('('),end=closeBracket(mask,open,'(',')');
-    const name=match[1],raw=code.slice(start,end+1),description=describe(name);
+  const link = compilerSourceLinks(code,source,map);
+  const fragments = link ? [] : templateFragments(source);
+  return calls.map(({name,start,end,receiver,indexInChain}) => {
+    const raw=code.slice(start,end+1),description=describe(name);
     const enclosing=ranges.filter(range=>range.start<start&&range.end>end).sort((a,b)=>(a.end-a.start)-(b.end-b.start))[0];
     const phase:CompilerPhase=eventBodies.some(body=>body.start<start&&body.end>end)?'event':enclosing?.phase||(/define|setClass/i.test(name)?'definition':'helper');
-    const bindings=[...new Set([...raw.matchAll(/\bctx(?:_r\d+)?\.([A-Za-z_$][\w$]*)/g)].map(value=>value[1]))].slice(0,12);
-    instructions.push({id:path+':'+start,name,line:sourceLine(code,start),endLine:sourceLine(code,end),raw,phase,...description,bindings,sourceMatch:matchSource(raw,name,source,bindings)});
-    if(instructions.length>=500)break;
-  }
-  return instructions;
+    const bindings=[...new Set([...mask.slice(start,end+1).matchAll(/\bctx(?:_r\d+)?\.([A-Za-z_$][\w$]*)/g)].map(value=>value[1]))].slice(0,12);
+    // Component metadata may surround an entire generated template, and does not designate a particular DOM target.
+    const sourceMatch = phase === 'definition' ? null : link ? link(receiver,end+1,indexInChain) : matchSource(raw,name,source,fragments,bindings);
+    return {id:path+':'+start,name,line:sourceLine(code,start),endLine:sourceLine(code,end),raw,phase,...description,bindings,sourceMatch};
+  });
 }
 export function generatedLines(code:string,instructions:CompilerInstruction[]):GeneratedLine[]{return code.split('\n').slice(0,1800).map((content,index)=>({number:index+1,content,instructions:instructions.filter(instruction=>instruction.line===index+1)}));}

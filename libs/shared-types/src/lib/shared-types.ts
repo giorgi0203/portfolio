@@ -52,11 +52,18 @@ export interface CompilerDiagnostic {
   category: 'error' | 'warning' | 'info';
 }
 
+/** Source-map v3 VLQ mappings. Only segments for the submitted component are exposed as editor links. */
+export interface TemplateSourceMap {
+  mappings: string;
+  sourceIndex: number;
+}
+
 export interface CompiledFile {
   /** Relative path of the emitted file */
   path: string;
   /** File content */
   content: string;
+  templateMap?: TemplateSourceMap;
 }
 
 export interface CompileSuccessResponse {
