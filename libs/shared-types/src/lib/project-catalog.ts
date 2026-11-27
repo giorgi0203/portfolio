@@ -5,7 +5,7 @@ export const projectCatalog: CatalogProject[] = [
     id: 1,
     title: 'HLS Inspector',
     description:
-      'Play a stream and inspect its qualities, buffering, network timings and live playback diagnostics.',
+      'Play a stream and use Stream Doctor to investigate a stall, from buffered seconds to individual segment requests.',
     technologies: ['Angular', 'HLS.js', 'TypeScript'],
     githubUrl:
       'https://github.com/giorgi0203/portfolio/tree/main/apps/hls-player',
@@ -27,7 +27,7 @@ export const projectCatalog: CatalogProject[] = [
     label: 'ORGANIZED CHAOS',
   },
 
-  {id:3,title:'Angular Learning Lab',description:'Learn Angular by editing working examples, running previews, solving challenges and exploring how changes reach the screen.',technologies:['Angular', 'TypeScript', 'Monaco'],githubUrl:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/angular-compiler-ui',liveUrl:'https://angular-compiler.giorgi.app/',imageUrl:'/assets/angular-compiler.svg',category:'useful',label:'ANGULAR UNDER THE HOOD'},
+  {id:3,title:'Angular Learning Lab',description:'Trace a template into the DOM and compiled code, replay a render, and discover which row keeps its draft.',technologies:['Angular', 'TypeScript', 'Monaco'],githubUrl:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/angular-compiler-ui',liveUrl:'https://angular-compiler.giorgi.app/',imageUrl:'/assets/angular-compiler.svg',category:'useful',label:'ANGULAR UNDER THE HOOD'},
   {id:4,showInPortfolio:false,title:'Example MCP',description:'A tiny MCP server with a calculator, date/time tools, resources, and prompt templates. Bring your favorite MCP client.',technologies:['MCP', 'Node.js', 'TypeScript'],githubUrl:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/example-mcp',liveUrl:'https://example-mcp.giorgi.app/',imageUrl:'/assets/example-mcp.svg',category:'useful',label:'TOOLS FOR YOUR TOOLS'},
   {id:5,showInPortfolio:false,title:'MCP Gateway',description:'One entry point for MCP services, with backend discovery and streaming request forwarding.',technologies:['MCP', 'Node.js', 'HTTP'],githubUrl:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/mcp-gateway',liveUrl:'https://mcp.giorgi.app/',imageUrl:'/assets/mcp.svg',category:'useful',label:'ONE DOOR, MANY TOOLS'},
   {id:6,showInPortfolio:false,title:'Portfolio API',description:'Explore the live project catalog and skills through a documented API. No imaginary e-commerce empire included.',technologies:['Express', 'OpenAPI', 'TypeScript'],githubUrl:'https://github.com/giorgi0203/portfolio/tree/codex/portfolio-subdomains/apps/portfolio-api',liveUrl:'https://api.giorgi.app/',imageUrl:'/assets/api.svg',category:'useful',label:'THE WIRING BEHIND IT'},
@@ -65,5 +65,19 @@ export const projectCatalog: CatalogProject[] = [
     imageUrl: '/assets/bug-safari.svg',
     category: 'useful',
     label: 'DEBUGGING IN THE WILD',
+  },
+  {
+    id: 12, title: 'Same Frame',
+    description: 'Recreate an old photo using a camera overlay. Drag between then and now, or save the pair as an animated GIF.',
+    technologies: ['Camera', 'Canvas', 'GIF'],
+    githubUrl: 'https://github.com/giorgi0203/portfolio/tree/codex/five-playground-updates/apps/same-frame',
+    liveUrl: 'https://same-frame.giorgi.app/', imageUrl: '/assets/same-frame.webp', category: 'play', label: 'THEN & NOW',
+  },
+  {
+    id: 13, title: 'Split the Supra',
+    description: 'Pass the receipt around with a QR code. Claim your dishes, share the khinkali, and see what everyone owes in lari.',
+    technologies: ['TypeScript', 'SQLite', 'OpenAI'],
+    githubUrl: 'https://github.com/giorgi0203/portfolio/tree/codex/five-playground-updates/apps/split-supra',
+    liveUrl: 'https://split-supra.giorgi.app/', imageUrl: '/assets/split-supra.webp', category: 'useful', label: 'AT THE TABLE',
   },
 ];

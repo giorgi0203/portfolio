@@ -1,8 +1,15 @@
-name: Deploy Learning Lab compiler inspector
+name: Deploy Angular Learning Lab
 on:
   push:
-    branches: [codex/portfolio-subdomains]
-    paths: ['.github/workflows/learning-lab-deploy.yml']
+    branches: [codex/angular-connected-inspector, codex/five-playground-updates, main]
+    paths:
+      - 'apps/angular-compiler-ui/**'
+      - 'apps/angular-compiler-api/**'
+      - 'deploy/compiler-runtime/**'
+      - 'deploy/install-learning-lab.sh'
+      - 'scripts/package-learning-lab.py'
+      - 'scripts/learning*-browser.cjs'
+      - '.github/workflows/learning-lab-deploy.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,50 +17,82 @@ concurrency:
   group: giorgi-learning-lab-deployment
   cancel-in-progress: false
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 25
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+      NX_DAEMON: 'false'
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: appleboy/ssh-action@v1.0.0
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked build and compiler dependencies
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm ci --prefix deploy/compiler-runtime --omit=dev --no-audit --no-fund
+          npm install --prefix "$RUNNER_TEMP/lab-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/lab-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Test, build and exercise the real compiler and browser locally
+        run: |
+          npx nx lint angular-compiler-ui
+          npx nx test angular-compiler-ui
+          npx nx build angular-compiler-api
+          npx nx build angular-compiler-ui --configuration=production
+          node scripts/learning-inspector-browser.cjs
+      - name: Package the tested source revision
+        id: package
+        run: |
+          python3 scripts/package-learning-lab.py learning-lab.tar.gz
+          echo "checksum=$(sha256sum learning-lab.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Stage the bundle in the deployment user's home directory
+        uses: appleboy/scp-action@8a92fcdb1eb4ffbf538b2fa286739760aac8a95b # v0.1.4
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
-          command_timeout: 3m
+          source: learning-lab.tar.gz
+          target: .cache/giorgi-learning/${{ env.RELEASE_ID }}
+      - name: Activate the Angular UI and compiler
+        id: activate
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799 # v1.0.0
+        env:
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID,CHECKSUM
+          command_timeout: 4m
           script: |
             set -eu
-            stage=/var/tmp/giorgi-learning-${{ github.sha }}
-            mkdir -p "$stage"
+            cd "$HOME/.cache/giorgi-learning/$RELEASE_ID"
+            stage=$(pwd -P)
             trap 'rm -rf -- "$stage"' EXIT
-            curl -fsSL --max-time 90 https://raw.githubusercontent.com/giorgi0203/portfolio/906b2e46c04092c8570e99c21705d9cce3c4e4b8/learning-lab-deploy.tar.gz -o "$stage/bundle.tar.gz"
-            printf '%s  %s\n' 'f196bcf4a4f8b4d2ebb5823b09075a32cdf3ad98092e27d82436c5810a9bd33a' "$stage/bundle.tar.gz" | sha256sum --check --strict
-            tar -xzf "$stage/bundle.tar.gz" -C "$stage" --no-same-owner
-            sudo -n bash "$stage/deploy/install-learning-lab.sh" "$stage" 17dab5e46f57c6293b161560c32cae316ec274eb
-  browser:
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [inspector, lessons]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: 17dab5e46f57c6293b161560c32cae316ec274eb
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
-      - name: Exercise real source mapping, compiler output and existing lessons
+            printf '%s  %s\n' "$CHECKSUM" learning-lab.tar.gz | sha256sum --check --strict
+            tar -xzf learning-lab.tar.gz --no-same-owner
+            sudo -n bash install-learning-lab.sh install "$RELEASE_ID"
+      - name: Verify public connections, live changes, mobile, lessons and saves
+        id: public_browser
         env:
           LAB_URL: https://angular-compiler.giorgi.app/
-          CHROME_PATH: /usr/bin/google-chrome
         run: |
-          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/browser/node_modules/playwright"
-          if [ '${{ matrix.suite }}' = inspector ]; then
-            node scripts/learning-inspector-browser.cjs
-          else
-            node scripts/learning-browser.cjs
-          fi
+          node scripts/learning-inspector-browser.cjs
+          node scripts/learning-browser.cjs
+      - name: Restore the preceding Lab release if public verification failed
+        if: failure() && steps.activate.outcome == 'success' && steps.public_browser.outcome == 'failure'
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799 # v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID
+          script: sudo -n bash "/var/backups/giorgi-learning-lab/$RELEASE_ID/installer" rollback "$RELEASE_ID"

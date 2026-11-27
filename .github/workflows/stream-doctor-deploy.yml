@@ -1,0 +1,99 @@
+name: Deploy HLS Stream Doctor
+on:
+  push:
+    branches: [codex/five-playground-updates, main]
+    paths:
+      - 'apps/hls-player/**'
+      - 'scripts/hls-inspector-browser.cjs'
+      - 'deploy/install-stream-doctor.sh'
+      - '.github/workflows/stream-doctor-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: hls-player-deployment
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NX_DAEMON: 'false'
+      NX_ISOLATE_PLUGINS: 'false'
+      CHROME_PATH: /usr/bin/google-chrome
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies and the browser harness
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          npm install --prefix "$RUNNER_TEMP/hls-browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/hls-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Check the player, unit tests and production build
+        run: |
+          npx nx lint hls-player
+          npx nx test hls-player --watch=false
+          npx nx build hls-player --configuration=production
+      - name: Exercise real HLS playback and delayed-segment diagnosis
+        run: |
+          python3 -m http.server 4301 --bind 127.0.0.1 --directory dist/apps/hls-player >"$RUNNER_TEMP/hls-server.log" 2>&1 &
+          server=$!
+          trap 'kill "$server" || true' EXIT
+          curl -fsS --retry 10 --retry-all-errors --retry-delay 1 http://127.0.0.1:4301/ -o /dev/null
+          HLS_URL=http://127.0.0.1:4301 node scripts/hls-inspector-browser.cjs
+      - name: Package the tested build
+        id: package
+        run: |
+          tar -czf stream-doctor.tar.gz -C dist/apps hls-player -C "$GITHUB_WORKSPACE/deploy" install-stream-doctor.sh
+          echo "checksum=$(sha256sum stream-doctor.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Stage the bundle over SSH
+        uses: appleboy/scp-action@8a92fcdb1eb4ffbf538b2fa286739760aac8a95b
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          source: stream-doctor.tar.gz
+          target: .cache/giorgi-stream-doctor/${{ env.RELEASE_ID }}
+      - name: Activate the HLS static release
+        id: activate
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        env:
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID,CHECKSUM
+          script: |
+            set -eu
+            cd "$HOME/.cache/giorgi-stream-doctor/$RELEASE_ID"
+            stage=$(pwd -P)
+            trap 'rm -rf -- "$stage"' EXIT
+            printf '%s  %s\n' "$CHECKSUM" stream-doctor.tar.gz | sha256sum --check --strict
+            tar -xzf stream-doctor.tar.gz --no-same-owner
+            sudo -n bash install-stream-doctor.sh install "$RELEASE_ID"
+      - name: Verify public HTTPS playback, buffering, mobile and report export
+        id: public_browser
+        env:
+          HLS_URL: https://hls-player.giorgi.app
+        run: node scripts/hls-inspector-browser.cjs
+      - name: Restore the preceding HLS release on public verification failure
+        if: failure() && steps.activate.outcome == 'success' && steps.public_browser.outcome == 'failure'
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
+          envs: RELEASE_ID
+          script: sudo -n bash "/var/backups/giorgi-stream-doctor/$RELEASE_ID/installer" rollback "$RELEASE_ID"

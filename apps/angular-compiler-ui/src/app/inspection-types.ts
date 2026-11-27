@@ -27,15 +27,34 @@ export interface InspectionSelection {
   values: Record<string, string>;
   locals: Record<string, string>;
   pinned: boolean;
+  origin?: 'preview' | 'workspace';
+  /** One-based position among the currently rendered instances of this source block. */
+  instanceIndex?: number;
+  instanceCount?: number;
+  /** Last browser-observed change to this particular instance during this run. */
+  lastDomChange?: InspectionChange;
   reason?: string;
 }
+export interface InspectionChange {
+  name: string;
+  before: string;
+  after: string;
+}
+export interface RecordedDomChange extends InspectionChange {
+  tag: string;
+  blockId: string | null;
+}
+
 export interface InspectionActivity {
   id: number;
-  kind: 'event' | 'render';
+  kind: 'initial' | 'event' | 'render' | 'state';
   phase: string;
   at: number;
   blockId: string | null;
   eventName: string;
   handler: string;
-  changes: Array<{name:string; before:string; after:string}>;
+  changes: InspectionChange[];
+  state: Record<string, string>;
+  domChanges: RecordedDomChange[];
+  domChangeCount: number;
 }

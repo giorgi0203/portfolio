@@ -1,0 +1,32 @@
+<section class="doctor" aria-labelledby="doctor-title">
+  <header><h2 id="doctor-title">Stream Doctor</h2><span>Playback timeline</span></header>
+  @if(doctor().buffer.length) {
+    @let ceiling = scale;
+    <figure><figcaption>Playable buffer ahead <span>0–{{ceiling.toFixed(1)}} s</span></figcaption>
+      <div class="chart" aria-hidden="true">@for(sample of doctor().buffer;track sample.atMs){<i [style.height.%]="100*sample.seconds/ceiling" [class.low]="sample.seconds<.25"></i>}</div>
+      <div class="axis"><small>+{{time(doctor().buffer[0].atMs/1000)}}</small><small>Session time · +{{time(doctor().buffer[doctor().buffer.length-1].atMs/1000)}}</small></div>
+    </figure>
+  }
+  @if(selected;as wait) {
+    <div class="split">
+      <div><h3>Buffering events</h3><div class="events" role="group" aria-label="Buffering events">
+        @for(entry of doctor().waits;track entry.id){<button type="button" (click)="select(entry.id)" [attr.aria-pressed]="entry.id===wait.id">
+          <strong>{{entry.kind}} wait</strong> <span>at {{time(entry.position)}}</span><small>+{{time(entry.atMs/1000)}} into session</small>
+        </button>}
+      </div></div>
+      <article aria-label="Selected buffering event">
+        <h3>Why did it buffer?</h3><p class="reason">{{explain(wait)}}</p>
+        <dl><div><dt>Buffer at onset</dt><dd>{{wait.bufferSeconds.toFixed(2)}} s</dd></div><div><dt>Active rendition at onset</dt><dd>{{wait.rendition}}</dd></div><div><dt>Wait duration</dt><dd>{{wait.durationMs===null?'Waiting…':(wait.durationMs/1000).toFixed(2)+' s · '+wait.endedBy}}</dd></div></dl>
+        @for(item of wait.segments;track $index){
+          <div class="evidence"><strong>{{item.request.track==='audio'?'Audio':'Main'}} · {{item.request.sequence==='initSegment'?'Init segment':'Segment #'+item.request.sequence}}@if(item.request.part!==null){ · part {{item.request.part}}}</strong>
+            <span>{{item.when}} · {{item.stateThen}} · {{item.nearPosition?'Near playback position':'Concurrent transfer'}}</span>
+            <span>{{item.request.rendition}} · {{item.request.state}}@if(item.request.httpStatus){ · HTTP {{item.request.httpStatus}}}@if(item.request.downloadMs!==null){ · {{item.request.downloadMs.toFixed(0)}} ms transfer}</span>
+            <code>{{item.request.origin}}</code>
+          </div>
+        } @empty {
+          <p class="note">{{wait.native?'Native HLS exposes the media buffer and wait events. Individual segment requests and download timings are unavailable.':'No matching segment request was observable for this wait.'}}</p>
+        }
+      </article>
+    </div>
+  } @else {<p class="note">Play a stream to record its buffer. When playback waits for data, select the event here to inspect its segment and timing.</p>}
+</section>

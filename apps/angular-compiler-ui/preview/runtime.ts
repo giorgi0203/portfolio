@@ -18,15 +18,17 @@ function send(type:string,data:Record<string,unknown>={}){window.parent.postMess
 const mountNode=document.querySelector('#mount');
 if(!mountNode)throw new Error('Preview mount is missing.');
 const previewMount:Element=mountNode;
-const inspector=new PreviewInspector(previewMount,send);
-function state(mutated=false){
+const inspector=new PreviewInspector(previewMount,send,()=>componentState(application?.components[0]?.instance));
+function state(records:MutationRecord[]=[],angularRendered=false,initial=false){
  const instance=application?.components[0]?.instance;
  if(!instance)return;
  const next=componentState(instance);
- const changes=Object.keys(next).filter(key=>next[key]!==lastState[key]).map(key=>({name:key,before:lastState[key]??'—',after:next[key]}));
+ const keys=new Set([...Object.keys(lastState),...Object.keys(next)]);
+ const changes=Array.from(keys).filter(key=>next[key]!==lastState[key]).map(key=>({name:key,before:lastState[key]??'—',after:next[key]??'—'}));
  lastState=next;
  send('learning:state',{state:next,changes,batches});
- inspector.rendered(changes,mutated);
+ if(initial)inspector.initial(next);
+ else inspector.rendered(changes,records,angularRendered,next);
 }
 const pause=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function run(source:string,checks:Check[]){
@@ -50,8 +52,14 @@ async function run(source:string,checks:Check[]){
   mount.append(document.createElement(selector));
   application=await browser.bootstrapApplication(root,{providers:[core.provideZonelessChangeDetection()]});
   await application.whenStable();
-  observer=new MutationObserver(()=>{batches++;state(true);});observer.observe(mount,{subtree:true,childList:true,characterData:true,attributes:true});
-  state();send('learning:rendered');
+  observer=new MutationObserver(records=>{batches++;state(records);});
+  observer.observe(mount,{subtree:true,childList:true,characterDataOldValue:true,attributeOldValue:true});
+  core.afterEveryRender({read:()=>{
+   const records=observer?.takeRecords()??[];
+   if(records.length)batches++;
+   state(records,true);
+  }},{injector:application.injector});
+  state([],false,true);send('learning:rendered');
   const results=[];
   for(const check of checks.slice(0,12)){
    let passed=false,actual='';
@@ -69,12 +77,13 @@ async function run(source:string,checks:Check[]){
   if(checks.length)send('learning:checked',{results,passed:results.every(result=>result.passed)});
  }catch(error){send('learning:error',{message:error instanceof Error?error.message:String(error)});}
 }
-document.addEventListener('click',()=>setTimeout(state,50));document.addEventListener('input',()=>setTimeout(state,50));
+document.addEventListener('click',()=>setTimeout(()=>state(),50));document.addEventListener('input',()=>setTimeout(()=>state(),50));
 window.addEventListener('message',event=>{
  if(event.source!==window.parent||event.origin!==config.parentOrigin||event.data?.channel!==config.channel)return;
  if(event.data.runId===runId){
   if(event.data.type==='learning:inspect-mode'){inspector.setEnabled(event.data.enabled!==false);return;}
-  if(event.data.type==='learning:focus-block'&&typeof event.data.blockId==='string'){inspector.focusBlock(event.data.blockId,event.data.pin!==false);return;}
+  if(event.data.type==='learning:focus-block'&&typeof event.data.blockId==='string'){inspector.focusBlock(event.data.blockId,event.data.pin!==false,event.data.instanceIndex);return;}
+  if(event.data.type==='learning:clear-focus'){inspector.clearFocus();return;}
   if(event.data.type==='learning:unpin'){inspector.unpin();return;}
  }
  if(event.data.type==='learning:run'&&typeof event.data.source==='string'){

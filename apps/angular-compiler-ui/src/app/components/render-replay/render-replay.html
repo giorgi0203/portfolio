@@ -1,0 +1,52 @@
+<section aria-label="Render Replay">
+  <header>
+    <h3>Render Replay</h3>
+    @if(frame(); as current){<span class="mode" [class.historical]="history()">{{history() ? 'Reviewing history' : 'Following live'}}</span>}
+  </header>
+  @if(frame(); as current){
+    <p>Step through the latest {{limit}} observations. The preview keeps running while you review.</p>
+    <div class="transport" role="group" aria-label="Playback controls">
+      <button type="button" aria-label="Previous frame" (click)="seek(index()-1)" [disabled]="index()===0">←</button>
+      <input aria-label="Recorded frame" type="range" min="0" [max]="visible().length-1" [value]="index()"
+        [disabled]="visible().length<2" [attr.aria-valuetext]="'Frame '+current.id+' · '+current.phase"
+        (input)="seek($any($event.target).valueAsNumber)">
+      <button type="button" aria-label="Next frame" (click)="seek(index()+1)" [disabled]="index()>=visible().length-1">→</button>
+      @if(history()){<button type="button" (click)="history.set(null)">Follow live</button>}
+    </div>
+    <article aria-label="Selected recorded frame">
+      <div class="frame-title"><small>Frame {{current.id}}</small><strong>{{current.eventName || current.phase}}</strong></div>
+      @if(current.handler){<code class="handler">{{current.handler}}</code>}
+      @if(current.kind==='event' && current.blockId){@if(lookup().get(current.blockId); as block){
+        <button class="link" type="button" [disabled]="stale()" (click)="inspectSource.emit(block)">Open event source · L{{block.startLine}}</button>
+      }}
+      @if(current.changes.length){
+        <h4>Root state changes</h4>
+        <dl class="values">@for(change of current.changes; track $index){
+          <div><dt>{{change.name}}</dt><dd>{{change.before}} → {{change.after}}</dd></div>
+        }</dl>
+      }
+      @if(current.kind==='render'){
+        <h4>DOM changes</h4>
+        @if(!current.domChangeCount){<p>No text, attribute, or child-list changes captured.</p>}
+        @for(change of current.domChanges; track $index){
+          <div class="mutation">
+            <small>&lt;{{change.tag}}&gt; · {{change.name}}</small>
+            @if(change.blockId && lookup().get(change.blockId); as block){
+              <button class="mutation-link" type="button" [disabled]="stale()" (click)="inspectSource.emit(block)"
+                [attr.aria-label]="'Open template for '+change.before+' → '+change.after">
+                <code>{{change.before}} → {{change.after}}</code><span>Template · L{{block.startLine}} ↗</span>
+              </button>
+            } @else {<code>{{change.before}} → {{change.after}}</code>}
+          </div>
+        }
+        @if(current.domChangeCount>current.domChanges.length){<p>Showing {{current.domChanges.length}} of {{current.domChangeCount}} observed changes.</p>}
+      }
+      <details><summary>Captured root state ({{stateEntries().length}})</summary>
+        <dl class="values">@for(entry of stateEntries(); track entry[0]){
+          <div><dt>{{entry[0]}}</dt><dd>{{entry[1]}}</dd></div>
+        }</dl>
+      </details>
+      @if(stale()){<p>These frames belong to the previous source. Run the edited preview to record a new timeline.</p>}
+    </article>
+  } @else {<p>Run a preview, then interact with it to record component state and DOM changes.</p>}
+</section>

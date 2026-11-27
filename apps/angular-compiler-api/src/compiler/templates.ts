@@ -2,7 +2,7 @@
  * Templates for generating minimal Angular project files
  */
 
-export function getTsConfigJson(nodeModulesPath: string): string {
+export function getTsConfigJson(nodeModulesPath: string, sourceMap = false): string {
   // Use forward slashes for paths in tsconfig
   const nmPath = nodeModulesPath.replace(/\\/g, '/');
   
@@ -11,7 +11,7 @@ export function getTsConfigJson(nodeModulesPath: string): string {
       compilerOptions: {
         baseUrl: '.',
         outDir: './dist',
-        sourceMap: false,
+        sourceMap,
         declaration: false,
         moduleResolution: 'node',
         emitDecoratorMetadata: true,

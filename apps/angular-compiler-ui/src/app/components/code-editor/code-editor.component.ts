@@ -148,7 +148,14 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
     const instance=this.editor,model=instance?.getModel();if(!instance||!model)return;
     if(!value||!Number.isFinite(value.startLine)||!Number.isFinite(value.endLine)){this.decorations=instance.deltaDecorations(this.decorations,[]);return;}
     const startLineNumber=Math.max(1,Math.min(model.getLineCount(),Math.floor(value.startLine))),endLineNumber=Math.max(startLineNumber,Math.min(model.getLineCount(),Math.floor(value.endLine)));
-    this.decorations=instance.deltaDecorations(this.decorations,[{range:{startLineNumber,endLineNumber,startColumn:1,endColumn:model.getLineMaxColumn(endLineNumber)},options:{isWholeLine:true,className:'learning-source-highlight',linesDecorationsClassName:'learning-source-gutter'}}]);
+    const startColumn = Math.max(1, Math.min(value.startColumn ?? 1, model.getLineMaxColumn(startLineNumber)));
+    const endColumn = Math.max(1, Math.min(value.endColumn ?? model.getLineMaxColumn(endLineNumber), model.getLineMaxColumn(endLineNumber)));
+    const caret = startLineNumber === endLineNumber && startColumn === endColumn;
+    this.decorations = instance.deltaDecorations(this.decorations, [{
+      range: { startLineNumber, endLineNumber, startColumn, endColumn },
+      options: { inlineClassName:'learning-source-highlight', linesDecorationsClassName:'learning-source-gutter',
+        ...(caret ? {isWholeLine:true, className:'learning-source-highlight'} : {}) },
+    }]);
     instance.revealLinesInCenterIfOutsideViewport(startLineNumber,endLineNumber);
   }
   ngOnDestroy(){this.selectionListener?.dispose();this.editor=undefined;}

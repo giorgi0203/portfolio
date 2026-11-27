@@ -28,7 +28,7 @@ describe('Personal workshop', () => {
     expect(page.querySelector('.hero-portrait')?.getAttribute('alt')).toContain(
       'Giorgi',
     );
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(8);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(10);
     for(const host of ['example-mcp','mcp','api']) expect(page.querySelector('a[href="https://'+host+'.giorgi.app/"]')).toBeNull();
   });
 
@@ -48,7 +48,7 @@ describe('Personal workshop', () => {
     expect(page.querySelector('[aria-label="Open HTTP Playground"]')).not.toBeNull();
     expect(page.querySelector('[aria-label="Open Bug Safari"]')).not.toBeNull();
     expect(page.querySelector('[aria-label="Open The Decision Department"]')).toBeNull();
-    expect(page.querySelectorAll('[data-app-card]').length).toBe(6);
+    expect(page.querySelectorAll('[data-app-card]').length).toBe(7);
   });
 
   it('offers another idea for a future project', () => {

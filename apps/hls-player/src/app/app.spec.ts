@@ -28,6 +28,20 @@ describe('HLS Inspector', () => {
     expect(report).not.toContain('super-secret'); expect(report).not.toContain('/private/'); expect(report).not.toContain('master.m3u8');
     expect(report).toContain('https://example.com'); fixture.destroy();
   });
+  it('shows native buffering evidence and resets it when the user switches sources', async () => {
+    const fixture = TestBed.createComponent(App); fixture.detectChanges();
+    const app=fixture.componentInstance, video:HTMLVideoElement=fixture.nativeElement.querySelector('video');
+    await app.changeVideoUrl('https://example.com/first.m3u8');
+    app.updateMedia(new Event('waiting'));
+    expect(app.doctor.waits).toHaveLength(0); // A paused player waiting for metadata is not a playback interruption.
+    Object.defineProperty(video,'paused',{configurable:true,value:false});
+    app.updateMedia(new Event('playing'));app.updateMedia(new Event('waiting'));fixture.detectChanges();
+    const panel=fixture.nativeElement.querySelector('app-stream-doctor');
+    expect(panel.textContent).toContain('Native HLS exposes');
+    expect(app.report().bufferingEvents[0]).toMatchObject({kind:'Rebuffer',native:true,segments:[]});
+    await app.changeVideoUrl('https://example.com/second.m3u8');
+    expect(app.report().bufferingEvents).toHaveLength(0);fixture.destroy();
+  });
   it('keeps native playback available when browser CORS blocks inspection', async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
     const fixture = TestBed.createComponent(App); fixture.detectChanges();

@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /table/
+Disallow: /api/
+Allow: /
+Sitemap: https://split-supra.giorgi.app/sitemap.xml

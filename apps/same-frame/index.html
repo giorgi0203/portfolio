@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Same Frame · Recreate a photo | Giorgi</title>
+  <meta name="description" content="Line up an old photograph with your camera. Export a private before-and-after slider or animated GIF, entirely on your device.">
+  <link rel="canonical" href="https://same-frame.giorgi.app/"><meta name="theme-color" content="#f7f2e6">
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <header><a class="wordmark" href="./" aria-label="Same Frame home"><i class="logo" aria-hidden="true"></i>Same Frame</a><a class="back" href="https://giorgi.app/">Giorgi’s workshop</a></header>
+  <main class="studio">
+    <section class="controls" aria-labelledby="step-title">
+      <h1 id="step-title" tabindex="-1">Line up a <em>memory.</em></h1>
+      <p id="instruction">Choose an old photo, line it up with your camera, and see what changed.</p>
+      <div class="actions" id="intro-controls">
+        <button class="primary" id="choose-original">Choose original photo <span aria-hidden="true" class="arrow"></span></button>
+        <button class="text-action" id="demo">Try the example</button>
+      </div>
+      <div class="actions" id="align-controls" hidden>
+        <div id="camera-idle"><button class="primary" id="start-camera">Open camera</button><button class="secondary" id="choose-new">Choose a newer photo</button></div>
+        <div id="camera-active" hidden>
+          <button class="primary" id="capture">Take photo</button>
+          <div class="small-actions"><button id="flip-camera">Switch camera</button><button id="stop-camera">Close camera</button></div>
+          <label class="slider-label" for="blend">Original overlay <output id="blend-value" for="blend">45%</output></label>
+          <input id="blend" type="range" min="0" max="100" value="45">
+        </div>
+      </div>
+      <div class="actions" id="export-controls" hidden>
+        <button id="save-gif" class="primary">Download animated GIF <span aria-hidden="true">↓</span></button>
+        <button id="save-slider" class="secondary">Download interactive slider</button>
+        <button class="text-action" id="retake">Replace newer photo</button>
+      </div>
+      <button id="reset" class="text-action" hidden>Start over</button>
+      <input id="original-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <input id="new-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <div class="status-line"><p id="status" role="status" aria-live="polite"></p></div>
+      <small class="privacy"><i aria-hidden="true"></i> Your photos stay on this device.</small>
+    </section>
+    <section class="photo-desk" aria-label="Photo comparison">
+      <figure>
+        <div class="stage" id="stage">
+          <img id="new-image" src="/sample-now.jpg" alt="The newer photograph" draggable="false">
+          <video id="camera" playsinline muted autoplay hidden></video>
+          <img id="original-image" src="/sample-then.jpg" alt="The original photograph" draggable="false">
+          <b id="then-label" class="tag then">Then</b><b id="now-label" class="tag now">Now</b>
+          <div id="divider" aria-hidden="true"><i>‹ ›</i></div>
+          <input id="compare" type="range" min="0" max="100" value="50" aria-label="Reveal original photo">
+        </div>
+        <figcaption><span id="photo-caption">Tbilisi · illustrated example</span><span id="gesture">Drag to compare ↔</span></figcaption>
+      </figure>
+    </section>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body></html>

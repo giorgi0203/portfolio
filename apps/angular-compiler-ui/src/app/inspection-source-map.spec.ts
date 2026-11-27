@@ -10,13 +10,13 @@ describe('Preview source mapping',()=>{
     ];
     for(const source of sources){
       const result=instrumentSource(source),button=result.blocks.find(block=>block.tag==='button');
-      expect(button).toBeDefined();
-      expect(button?.start).toBe(source.indexOf('<button'));
-      expect(button?.source).toBe(source.slice(button?.start,button?.end));
-      expect(button?.end).toBe(source.indexOf('</button>')+'</button>'.length);
+      if(!button)throw new Error('Missing mapped button');
+      expect(button.start).toBe(source.indexOf('<button'));
+      expect(button.source).toBe(source.slice(button.start,button.end));
+      expect(button.end).toBe(source.indexOf('</button>')+'</button>'.length);
       const file=ts.createSourceFile('source.ts',source,ts.ScriptTarget.Latest,true);
-      const position=file.getLineAndCharacterOfPosition(button!.start);
-      expect(button?.startLine).toBe(position.line+1);expect(button?.startColumn).toBe(position.character+1);
+      const position=file.getLineAndCharacterOfPosition(button.start);
+      expect(button.startLine).toBe(position.line+1);expect(button.startColumn).toBe(position.character+1);
       expect(result.source).toContain('data-lab-node');expect(result.unmappedComponents).toEqual([]);
     }
   });
@@ -26,7 +26,7 @@ describe('Preview source mapping',()=>{
 export class DemoComponent {show=true;tasks=[{id:1,title:'One'}];remove(){throw new Error('Do not run while mapping');}}`;
     const result=instrumentSource(source),button=result.blocks.find(block=>block.tag==='button');
     expect(button?.component).toBe('DemoComponent');
-    expect(button?.localNames.task).toBe('$implicit');expect(button?.localNames.position).toBe('$index');
+    expect(button?.localNames['task']).toBe('$implicit');expect(button?.localNames['position']).toBe('$index');
     expect(button?.controls.some(control=>control.includes('@for'))).toBe(true);
     expect(button?.controls.some(control=>control.includes('@if'))).toBe(true);
     expect(button?.bindings).toContainEqual({kind:'event',name:'click',expression:'remove(task)'});
@@ -35,8 +35,8 @@ export class DemoComponent {show=true;tasks=[{id:1,title:'One'}];remove(){throw 
   it('keeps nearest-loop aliases and marks outer contexts as omitted',()=>{
     const source="import {Component} from '@angular/core'; @Component({template: `@for(group of groups;track group.id;let gi=$index){@for(item of group.items;track item.id;let ii=$index){<p>{{group.name}} {{item.name}}</p>}}`}) export class DemoComponent {groups=[];}";
     const paragraph=instrumentSource(source).blocks.find(block=>block.tag==='p');
-    expect(paragraph?.localNames.item).toBe('$implicit');expect(paragraph?.localNames.ii).toBe('$index');
-    expect(paragraph?.localNames.group).toBeUndefined();expect(paragraph?.localNames.gi).toBeUndefined();
+    expect(paragraph?.localNames['item']).toBe('$implicit');expect(paragraph?.localNames['ii']).toBe('$index');
+    expect(paragraph?.localNames['group']).toBeUndefined();expect(paragraph?.localNames['gi']).toBeUndefined();
     expect(paragraph?.outerLocalsOmitted).toBe(true);
   });
   it('distinguishes child component blocks with the same element tag',()=>{

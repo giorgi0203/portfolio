@@ -8,12 +8,13 @@ const base = (process.env.HLS_URL || 'http://127.0.0.1:4301').replace(/\/$/, '')
 const fixtures = path.resolve(__dirname, '../apps/hls-player/test-fixtures');
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
-  let releaseSlow;
+  let releaseSlow, delayedSegment;
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, acceptDownloads: true });
     let recovered = false;
     await context.route('**/__inspector-fixtures/**', async route => {
       const name = new URL(route.request().url()).pathname.split('/').pop();
+      if (name === 'low-1.ts' && delayedSegment) await delayedSegment.promise;
       if (name === 'slow.m3u8') { await new Promise(resolve => { releaseSlow = resolve; }); return route.abort().catch(() => undefined); }
       if (name === 'missing.m3u8' || (name === 'recover.m3u8' && !recovered)) return route.fulfill({ status: 404, body: 'Not found', headers: { 'Access-Control-Allow-Origin': '*' } });
       if (name === 'not-playlist.m3u8') return route.fulfill({ status: 200, body: '<html>not HLS</html>' });
@@ -48,12 +49,37 @@ const fixtures = path.resolve(__dirname, '../apps/hls-player/test-fixtures');
     assert.ok(!text.includes('DO-NOT-EXPORT-THIS-TOKEN')); assert.ok(!text.includes('__inspector-fixtures')); assert.ok(!text.includes('master.m3u8'));
     await page.getByRole('button', { name: 'Copy report', exact: true }).click();
     await page.getByText(/Redacted report copied|Clipboard unavailable/).waitFor();
+    // Force a real rebuffer: hold the next media response while the first segment actually plays out.
+    let resume;
+    delayedSegment = { promise: new Promise(resolve=>{resume=resolve;}), release:resume };
+    await load('low.m3u8?token=DO-NOT-EXPORT-THIS-TOKEN');
+    await page.waitForFunction(()=>{
+      const video=document.querySelector('video');
+      return video.readyState>=2 && video.buffered.length>0 && video.currentTime===0;
+    });
+    await page.evaluate(()=>{const video=document.querySelector('video');video.muted=true;void video.play();});
+    const doctor=page.getByRole('region',{name:'Stream Doctor'});
+    const rebuffer=doctor.getByRole('button',{name:/Rebuffer wait/}).first();
+    await rebuffer.waitFor();await rebuffer.click();
+    await doctor.locator('.evidence').filter({hasText:'Segment #1'}).getByText('At wait · Loading · Near playback position').waitFor();
+    assert.match(await doctor.locator('.reason').innerText(), /nearly empty/);
+    delayedSegment.release();delayedSegment=null;
+    await doctor.locator('.evidence').filter({hasText:'Segment #1'}).getByText(/Loaded.*[0-9]+ ms transfer/).waitFor();
+    await doctor.getByText(/s · Playing/).waitFor();
+    await page.waitForFunction(()=>document.querySelector('video').currentTime>2.2);
+    const doctorDownload=page.waitForEvent('download');
+    await page.getByRole('button',{name:'Download JSON',exact:true}).click();
+    await (await doctorDownload).saveAs(output);
+    const doctorText=fs.readFileSync(output,'utf8'),events=JSON.parse(doctorText).bufferingEvents;
+    assert.ok(!doctorText.includes('__inspector-fixtures')&&!doctorText.includes('DO-NOT-EXPORT'));
+    assert.ok(events.some(w=>w.kind==='Rebuffer'&&w.endedBy==='Playing'&&w.segments.some(s=>s.request.sequence===1&&s.request.downloadMs>0)));
+    console.log('PASS real delayed segment depletes the playback buffer; Stream Doctor links wait, rendition, redacted segment timing and recovery');
     await page.screenshot({ path: '/tmp/hls-inspector-desktop.png', fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: '/tmp/hls-inspector-mobile.png', fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1100 });
-    await load('missing.m3u8'); await page.getByRole('alert').getByText(/HTTP 404/).waitFor();
+    await load('missing.m3u8'); await doctor.getByRole('button',{name:/Rebuffer wait/}).waitFor({state:'detached'}); await page.getByRole('alert').getByText(/HTTP 404/).waitFor();
     await load('recover.m3u8'); await page.getByRole('alert').getByText(/HTTP 404/).waitFor();
     recovered = true; await page.getByRole('button', { name: 'Retry stream', exact: true }).click();
     await page.waitForFunction(() => document.querySelectorAll('.renditions tbody tr').length === 2);
@@ -68,5 +94,5 @@ const fixtures = path.resolve(__dirname, '../apps/hls-player/test-fixtures');
     await page.locator('.manifest-summary dd').getByText('Live', { exact: true }).waitFor();
     assert.deepEqual(errors, []);
     console.log('PASS real HLS playback, variants, quality control, buffer/network diagnostics, privacy-safe export, mobile layout, 404 recovery, malformed playlist, cancellation and live detection');
-  } finally { if (releaseSlow) releaseSlow(); await browser.close(); }
+  } finally { delayedSegment?.release(); if (releaseSlow) releaseSlow(); await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

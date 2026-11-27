@@ -213,6 +213,182 @@ export class DemoComponent {
   dismissFirst() { this.notices.update(notices => notices.slice(1)); }
 }`;
 
+// Emit two ordinary @for blocks so each copy can be edited and inspected in the lab.
+function trackingList(list: 'A' | 'B', track: string) {
+  return `<section aria-label="List ${list}">
+      <h3>List ${list}</h3>
+      <ol>
+        @for (task of tasks(); track ${track}) {
+          <li [attr.data-slot]="$index" [class.target]="hoveredSlot() === $index">
+            <strong class="handle" [class.ready]="canMove()" (pointerdown)="startDrag($event, task.id)"
+                    (pointermove)="overRow($event)" (pointerup)="endDrag($event)"
+                    (pointercancel)="cancelDrag()" (lostpointercapture)="cancelDrag()">{{ task.name }}</strong>
+            <input data-list="${list}" [attr.data-task]="task.id" [attr.data-position]="$index + 1"
+                   [attr.aria-label]="'List ${list} ' + task.name + ' draft'" maxlength="80"
+                   [readOnly]="finished()" placeholder="Write a draft"
+                   (input)="copyDraft($event, task.id)" />
+          </li>
+        }
+      </ol>
+    </section>`;
+}
+
+const rowTrackingSource = `import { Component, ElementRef, Injector, afterNextRender, inject, signal } from '@angular/core';
+
+const startingTasks = [{ id: 1, name: 'Sketch' }, { id: 2, name: 'Build' }, { id: 3, name: 'Ship' }];
+
+@Component({
+  selector: 'app-demo', standalone: true,
+  template: \`
+    <h2>Which row keeps my draft?</h2>
+    <p>Edit a draft. Each edit is copied to the matching input in the other list.</p>
+    <div class="boards">
+    ${trackingList('A', '$index')}
+    ${trackingList('B', 'task.id')}
+    </div>
+    <fieldset [disabled]="finished()">
+      <legend>Which list will keep every input with its original task?</legend>
+      @for (option of ['A', 'B', 'Both']; track option) {
+        <label><input type="radio" name="prediction" [value]="option"
+                      [checked]="prediction() === option" (change)="prediction.set(option)" />
+          {{ option === 'Both' ? 'Both' : 'List ' + option }}</label>
+      }
+    </fieldset>
+    <p>Drag a task name onto another row, or choose a move below.</p>
+    <div class="moves">
+      <label>Move task <select #choice [disabled]="finished()">
+        @for (task of tasks(); track task.id) {
+          <option [value]="task.id" [selected]="task.id === 2">{{ task.name }}</option>
+        }
+      </select></label>
+      <label>To position <select #position [disabled]="finished()">
+        <option value="0">First</option><option value="1">Second</option><option value="2">Third</option>
+      </select></label>
+      <button id="move" [disabled]="!canMove()" (click)="move(+choice.value, +position.value)">Move row</button>
+    </div>
+    <p aria-live="polite">{{ message() }}</p>
+    @for (result of results(); track result.list) {
+      <section class="evidence">
+        <h3>List {{ result.list }} kept {{ result.kept }} of {{ result.total }} inputs with their tasks.</h3>
+        @for (line of result.lines; track $index) { <p>{{ line }}</p> }
+      </section>
+    }
+    @if (finished()) { <button (click)="reset(); choice.value = '2'; position.value = '0'">Try again</button> }
+  \`,
+  styles: [\`
+    :host { display: block; font: 14px/1.45 system-ui, sans-serif; }
+    h2, h3 { margin: 0 0 .45rem; } p { margin: .5rem 0 .8rem; }
+    .boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    .boards section, .evidence { padding: .55rem; border: 1px solid #bdcbbd; border-radius: .5rem; }
+    .boards section:first-child { background: #faf4e7; } .boards section:last-child { background: #edf4e8; }
+    ol { margin: 0; padding: 0; list-style: none; } li { padding: .25rem 0; }
+    li.target { outline: 2px solid #41745c; border-radius: .25rem; }
+    .handle.ready { cursor: grab; touch-action: none; user-select: none; background: #fff9; }
+    .handle.ready::after { content: '⠿'; float: right; color: #536754; }
+    .handle { padding: .18rem 0; }
+    li input { box-sizing: border-box; width: 100%; min-width: 0; font: inherit; padding: .25rem; }
+    li strong { display: block; font-weight: 600; } fieldset { margin: .75rem 0; padding: .4rem; }
+    fieldset label { display: inline-block; margin-right: .4rem; } input[type="radio"] { padding: 0; }
+    .moves { display: flex; flex-wrap: wrap; gap: .45rem; align-items: end; }
+    .moves select { display: block; font: inherit; padding: .3rem; }
+    button { font: inherit; margin: 0; padding: .4rem .65rem; } button:disabled { opacity: .5; }
+    .evidence { margin-bottom: .5rem; } .evidence h3 { font-size: 1rem; }
+  \`]
+})
+export class DemoComponent {
+  tasks = signal([...startingTasks]);
+  prediction = signal('');
+  finished = signal(false);
+  message = signal('');
+  results = signal<{list: string; kept: number; total: number; lines: string[]}[]>([]);
+  hoveredSlot = signal(-1);
+  private drag: { task: number; pointer: number } | null = null;
+  private host: HTMLElement = inject(ElementRef).nativeElement;
+  private injector = inject(Injector);
+
+  ngAfterViewInit() { this.seedDrafts(); }
+  canMove() { return !!this.prediction() && !this.finished(); }
+
+  private inputs() {
+    return Array.from(this.host.querySelectorAll<HTMLInputElement>('input[data-task]'));
+  }
+  private seedDrafts() {
+    for (const input of this.inputs()) input.value = input.dataset['task'] === '2' ? 'Bring a pen' : '';
+  }
+  copyDraft(event: Event, id: number) {
+    const edited = event.target as HTMLInputElement;
+    for (const other of this.inputs()) {
+      if (other !== edited && Number(other.dataset['task']) === id) other.value = edited.value;
+    }
+  }
+  startDrag(event: PointerEvent, task: number) {
+    if (!this.canMove() || !event.isPrimary || event.button !== 0) return;
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+    this.drag = { task, pointer: event.pointerId };
+    this.overRow(event);
+  }
+  overRow(event: PointerEvent) {
+    if (this.drag?.pointer !== event.pointerId) return;
+    const element = this.host.ownerDocument.elementFromPoint(event.clientX, event.clientY);
+    const slot = element?.closest<HTMLElement>('li[data-slot]')?.dataset['slot'];
+    this.hoveredSlot.set(slot === undefined ? -1 : Number(slot));
+  }
+  endDrag(event: PointerEvent) {
+    if (this.drag?.pointer !== event.pointerId) return;
+    this.overRow(event);
+    const {task} = this.drag;
+    const slot = this.hoveredSlot();
+    this.cancelDrag();
+    if (slot >= 0) this.move(task, slot);
+  }
+  cancelDrag() { this.drag = null; this.hoveredSlot.set(-1); }
+  move(id: number, to: number) {
+    if (!this.canMove()) return;
+    const next = [...this.tasks()];
+    const from = next.findIndex(task => task.id === id);
+    if (from < 0 || to < 0 || to >= next.length) return;
+    if (from === to) { this.message.set('Choose a different position.'); return; }
+
+    // Save the actual input objects before Angular reconciles either list.
+    const before = this.inputs().map(node => ({
+      node, list: node.dataset['list']!, task: Number(node.dataset['task']), row: node.dataset['position']
+    }));
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    this.finished.set(true);
+    this.tasks.set(next);
+
+    afterNextRender(() => {
+      const results = ['A', 'B'].map(list => {
+        const group = before.filter(entry => entry.list === list);
+        let kept = 0;
+        const lines: string[] = [];
+        for (const {node, task, row} of group) {
+          const present = this.host.contains(node);
+          const current = present ? Number(node.dataset['task']) : null;
+          if (current === task) kept++;
+          if (node.value || task === id) {
+            const oldName = startingTasks.find(item => item.id === task)?.name;
+            const now = next.find(item => item.id === current)?.name;
+            const sameNode = present ? 'same input now in row ' + node.dataset['position'] + ' (' + now + ')' : 'input removed';
+            lines.push('Row ' + row + ' (' + oldName + ') → ' + sameNode + (node.value ? ' · “' + node.value + '”' : ''));
+          }
+        }
+        return { list, kept, total: group.length, lines };
+      });
+      const winners = results.filter(result => result.kept === result.total).map(result => result.list);
+      const outcome = winners.length === 2 ? 'Both' : (winners[0] ?? 'Neither');
+      this.message.set((outcome === this.prediction() ? 'Your prediction matched.' : 'Your prediction differed.') + ' Compare the reused input nodes below.');
+      this.results.set(results);
+    }, {injector: this.injector});
+  }
+  reset() {
+    this.tasks.set([...startingTasks]); this.finished.set(false); this.prediction.set('');
+    this.message.set(''); this.results.set([]); this.cancelDrag();
+    afterNextRender(() => this.seedDrafts(), {injector:this.injector});
+  }
+}`;
+
 export const learningLessons: LearningLesson[] = [
   {
     id: 'signals',
@@ -394,6 +570,32 @@ export const learningLessons: LearningLesson[] = [
       { label: 'The first notice is rendered from the template context', kind: 'text', selector: 'body', expected: 'Release ready' },
       { label: 'Removing a notice renders the next tracked item', kind: 'click-text', selector: '#dismiss', expected: 'Backup complete' },
       { label: 'Removing the final notice renders the empty view', kind: 'click-text', selector: '#dismiss', expected: 'All caught up.' }
+    ]
+  },
+  {
+    id: 'row-tracking',
+    title: 'Which row keeps my draft?',
+    topic: 'Compare row identity',
+    minutes: 6,
+    description: 'Give an input a draft, predict where it will land, then reorder two live lists.',
+    challenge: 'The starter uses track $index in list A and track task.id in list B. Run the experiment, then change list A so both lists preserve every draft with its task.',
+    explanation: [
+      'The draft lives in the browser input. Typing also copies the text to the matching input in the other list so both begin with the same note.',
+      'When Angular reconciles an @for block, its tracking key identifies which existing view to reuse. A stable task ID follows a task when its array position changes.',
+      'The experiment holds references to the actual input nodes before moving a task. After Angular renders, it reads the task and position from those same nodes to reveal the outcome.',
+      'Select either @for block in the editor. Compare the generated repeater creation calls and inspect the tracking function supplied to each.'
+    ],
+    hints: [
+      'Make a prediction, then move Build to the first position. Read where its input is now in each list.',
+      'Find the @for directly under the List A heading and compare its track expression with List B.'
+    ],
+    source: rowTrackingSource,
+    solution: rowTrackingSource.replace('@for (task of tasks(); track $index)', '@for (task of tasks(); track task.id)'),
+    checks: [
+      { label: 'Both live lists are rendered', kind: 'text', selector: '.boards', expected: 'List B' },
+      { label: 'Enter a prediction for both lists', kind: 'click-text', selector: 'input[value="Both"]', expected: 'Move row' },
+      { label: 'Moving Build reveals measured input identities', kind: 'click-text', selector: '#move', expected: 'List B kept 3 of 3 inputs with their tasks.' },
+      { label: 'List A also preserves every task’s input', kind: 'text', selector: '.evidence', expected: 'List A kept 3 of 3 inputs with their tasks.' }
     ]
   }
 ];

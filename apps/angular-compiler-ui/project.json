@@ -54,8 +54,15 @@
       },
       "defaultConfiguration": "production",
       "dependsOn": [
+        "lesson-output",
         "preview-runtime",
         "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/apps/angular-compiler-api/src/compiler/**/*",
+        "{workspaceRoot}/package-lock.json"
       ]
     },
     "serve": {
@@ -73,7 +80,11 @@
       "options": {
         "port": 4202,
         "proxyConfig": "apps/angular-compiler-ui/proxy.conf.json"
-      }
+      },
+      "dependsOn": [
+        "lesson-output",
+        "preview-runtime"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -104,6 +115,22 @@
       ],
       "options": {
         "command": "node apps/angular-compiler-ui/scripts/build-preview.cjs"
+      }
+    },
+    "lesson-output": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/scripts/build-lesson-output.cjs",
+        "{projectRoot}/src/app/lessons.ts",
+        "{workspaceRoot}/apps/angular-compiler-api/src/compiler/**/*",
+        "{workspaceRoot}/package-lock.json"
+      ],
+      "outputs": [
+        "{projectRoot}/public/lessons"
+      ],
+      "options": {
+        "command": "node apps/angular-compiler-ui/scripts/build-lesson-output.cjs"
       }
     }
   }
